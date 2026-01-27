@@ -16,7 +16,12 @@
     "types": [
       "node",
       "yml-register/types"
-    ]
+    ],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "src"
