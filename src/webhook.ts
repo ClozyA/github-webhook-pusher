@@ -73,7 +73,9 @@ export function registerWebhook(ctx: Context, config: Config) {
           // 需求 1.3, 9.2: 签名验证失败
           logger.warn('签名验证失败')
           koaCtx.status = 401
-          koaCtx.body = {error: 'Invalid signature'}
+          koaCtx.body = {
+            error: 'Invalid signature. Ensure Content-Type is application/json, and the signed payload matches the raw request body. 签名无效：请确认 Content-Type 为 application/json，且签名内容与实际请求体完全一致。'
+          }
           return
         }
       }
