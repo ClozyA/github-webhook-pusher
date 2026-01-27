@@ -46,6 +46,7 @@ export function extendDatabase(ctx: Context) {
     updatedAt: 'timestamp',
   }, {
     primary: 'id',
+    autoInc: true,
     unique: ['repo'],
   })
 
@@ -62,6 +63,7 @@ export function extendDatabase(ctx: Context) {
     updatedAt: 'timestamp',
   }, {
     primary: 'id',
+    autoInc: true,
   })
 
   ctx.model.extend('github_deliveries', {

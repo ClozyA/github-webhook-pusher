@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-github-webhook-pusher",
   "description": "GitHub Webhook 事件推送插件",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "contributors": [
     "ClozyA <aoxuan233@gmail.com>"
   ],
@@ -29,11 +29,11 @@
     "webhook"
   ],
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "fast-check": "^3.22.0",
+    "@types/node": "^22.19.7",
+    "fast-check": "^3.23.2",
     "koishi": "^4.18.7",
-    "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "typescript": "^5.9.3",
+    "vitest": "^2.2.0-beta.2"
   },
   "peerDependencies": {
     "koishi": "^4.18.7"
