@@ -2,6 +2,14 @@
   "name": "koishi-plugin-github-webhook-pusher",
   "description": "GitHub Webhook 事件推送插件",
   "version": "0.0.1",
+  "contributors": [
+    "ClozyA <aoxuan233@gmail.com>"
+  ],
+  "homepage": "https://github.com/ClozyA/github-webhook-pusher",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ClozyA/github-webhook-pusher.git"
+  },
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -16,7 +24,9 @@
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "github",
+    "webhook"
   ],
   "devDependencies": {
     "@types/node": "^22.10.5",
@@ -27,5 +37,16 @@
   },
   "peerDependencies": {
     "koishi": "^4.18.7"
+  },
+  "koishi": {
+    "description": {
+      "zh": "接收 GitHub Webhook 事件并推送到群聊，支持 Issues、Release、Push、PR、Star 等事件",
+      "en": "Receive GitHub Webhook events and push to chat groups, supporting Issues, Release, Push, PR, Star events"
+    },
+    "service": {
+      "required": ["server", "database"],
+      "optional": [],
+      "implements": []
+    }
   }
 }
