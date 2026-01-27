@@ -1,7 +1,7 @@
 import { Schema } from 'koishi'
+import { EventType } from './types'
 
-/** 支持的事件类型 */
-export type EventType = 'issues' | 'release' | 'push' | 'pull_request' | 'star'
+export { EventType }
 
 export interface Config {
   /** Webhook 接收路径 */
