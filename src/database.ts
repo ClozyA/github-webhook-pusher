@@ -1,5 +1,5 @@
-import { Context } from 'koishi'
-import { EventType } from './config'
+import {Context} from 'koishi'
+import {EventType} from './config'
 
 declare module 'koishi' {
   interface Tables {
@@ -48,7 +48,7 @@ export function extendDatabase(ctx: Context) {
     primary: 'id',
     unique: ['repo'],
   })
-  
+
   ctx.model.extend('github_subscriptions', {
     id: 'unsigned',
     platform: 'string',
@@ -63,7 +63,7 @@ export function extendDatabase(ctx: Context) {
   }, {
     primary: 'id',
   })
-  
+
   ctx.model.extend('github_deliveries', {
     deliveryId: 'string',
     repo: 'string',

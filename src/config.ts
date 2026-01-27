@@ -1,7 +1,7 @@
-import { Schema } from 'koishi'
-import { EventType } from './types'
+import {Schema} from 'koishi'
+import {EventType} from './types'
 
-export { EventType }
+export {EventType}
 
 export interface Config {
   /** Webhook 接收路径 */

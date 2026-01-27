@@ -40,11 +40,11 @@ export interface EventDisplayInfo {
 
 /** 事件类型到显示名称和 emoji 的映射 */
 export const EVENT_DISPLAY_MAP: Record<EventType, EventDisplayInfo> = {
-  issues: { name: 'Issue', emoji: '📌' },
-  release: { name: 'Release', emoji: '🚀' },
-  push: { name: 'Commit', emoji: '⬆️' },
-  pull_request: { name: 'PR', emoji: '🔀' },
-  star: { name: 'Star', emoji: '⭐' },
+  issues: {name: 'Issue', emoji: '📌'},
+  release: {name: 'Release', emoji: '🚀'},
+  push: {name: 'Commit', emoji: '⬆️'},
+  pull_request: {name: 'PR', emoji: '🔀'},
+  star: {name: 'Star', emoji: '⭐'},
 }
 
 /**

@@ -3,7 +3,7 @@
  * 需求: 4.1-4.7
  */
 
-import { ParsedEvent, CommitInfo, getDisplayType } from './types'
+import {CommitInfo, getDisplayType, ParsedEvent} from './types'
 
 /** Push 事件最大显示提交数 */
 const MAX_COMMITS = 3
@@ -13,7 +13,7 @@ const MAX_COMMITS = 3
  * 需求 4.1: 提取 issue 标题、编号、操作者和链接
  */
 export function parseIssuesEvent(payload: any): ParsedEvent | null {
-  const { action, issue, repository, sender } = payload
+  const {action, issue, repository, sender} = payload
 
   // 只处理 opened/closed/reopened/edited 动作
   if (!['opened', 'closed', 'reopened', 'edited'].includes(action)) {
@@ -38,7 +38,7 @@ export function parseIssuesEvent(payload: any): ParsedEvent | null {
  * 需求 4.2: 提取版本号、发布者和下载链接
  */
 export function parseReleaseEvent(payload: any): ParsedEvent | null {
-  const { action, release, repository, sender } = payload
+  const {action, release, repository, sender} = payload
 
   // 只处理 published/created 动作
   if (!['published', 'created'].includes(action)) {
@@ -64,7 +64,7 @@ export function parseReleaseEvent(payload: any): ParsedEvent | null {
  * 需求 4.3, 4.6: 提取分支名、提交列表（最多5条）和推送者信息
  */
 export function parsePushEvent(payload: any): ParsedEvent | null {
-  const { ref, commits, repository, sender, compare } = payload
+  const {ref, commits, repository, sender, compare} = payload
 
   // 提取分支名（去掉 refs/heads/ 前缀）
   const branch = ref?.replace('refs/heads/', '') || ''
@@ -97,7 +97,7 @@ export function parsePushEvent(payload: any): ParsedEvent | null {
  * 需求 4.4: 提取 PR 标题、编号、操作者和链接
  */
 export function parsePullRequestEvent(payload: any): ParsedEvent | null {
-  const { action, pull_request, repository, sender } = payload
+  const {action, pull_request, repository, sender} = payload
 
   // 只处理 opened/closed/merged 动作
   // 注意: merged 实际上是 closed + merged 标志
@@ -127,7 +127,7 @@ export function parsePullRequestEvent(payload: any): ParsedEvent | null {
  * 需求 4.5: 提取操作者和当前 star 数量
  */
 export function parseStarEvent(payload: any): ParsedEvent | null {
-  const { action, repository, sender } = payload
+  const {action, repository, sender} = payload
 
   // star 事件只有 created 和 deleted 动作
   if (!['created', 'deleted'].includes(action)) {

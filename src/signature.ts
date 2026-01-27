@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'crypto'
+import {createHmac, timingSafeEqual} from 'crypto'
 
 /**
  * 创建 GitHub Webhook 签名
@@ -26,15 +26,15 @@ export function verifySignature(payload: string, signature: string, secret: stri
   }
 
   const expected = createSignature(payload, secret)
-  
+
   // 使用常量时间比较防止时序攻击
   const sigBuffer = Buffer.from(signature)
   const expectedBuffer = Buffer.from(expected)
-  
+
   // 长度不同时也需要进行比较以保持常量时间
   if (sigBuffer.length !== expectedBuffer.length) {
     return false
   }
-  
+
   return timingSafeEqual(sigBuffer, expectedBuffer)
 }

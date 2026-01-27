@@ -3,8 +3,8 @@
  * 需求: 2.1-2.7
  */
 
-import { Context } from 'koishi'
-import { TrustedRepo } from '../database'
+import {Context} from 'koishi'
+import {TrustedRepo} from '../database'
 
 /** 仓库名格式验证正则表达式 */
 const REPO_NAME_REGEX = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/
@@ -34,9 +34,9 @@ export async function addTrustedRepo(ctx: Context, repo: string): Promise<Truste
   }
 
   const now = new Date()
-  
+
   // 检查是否已存在
-  const existing = await ctx.database.get('github_trusted_repos', { repo })
+  const existing = await ctx.database.get('github_trusted_repos', {repo})
   if (existing.length > 0) {
     return existing[0]
   }
@@ -48,7 +48,7 @@ export async function addTrustedRepo(ctx: Context, repo: string): Promise<Truste
     updatedAt: now,
   })
 
-  const [created] = await ctx.database.get('github_trusted_repos', { repo })
+  const [created] = await ctx.database.get('github_trusted_repos', {repo})
   return created
 }
 
@@ -60,7 +60,7 @@ export async function addTrustedRepo(ctx: Context, repo: string): Promise<Truste
  * @returns 是否成功移除
  */
 export async function removeTrustedRepo(ctx: Context, repo: string): Promise<boolean> {
-  const result = await ctx.database.remove('github_trusted_repos', { repo })
+  const result = await ctx.database.remove('github_trusted_repos', {repo})
   return (result.removed ?? 0) > 0
 }
 
@@ -83,7 +83,7 @@ export async function listTrustedRepos(ctx: Context): Promise<TrustedRepo[]> {
  * @returns 是否信任且启用
  */
 export async function isTrusted(ctx: Context, repo: string): Promise<boolean> {
-  const repos = await ctx.database.get('github_trusted_repos', { repo, enabled: true })
+  const repos = await ctx.database.get('github_trusted_repos', {repo, enabled: true})
   return repos.length > 0
 }
 
@@ -94,7 +94,7 @@ export async function isTrusted(ctx: Context, repo: string): Promise<boolean> {
  * @returns 是否在信任列表中
  */
 export async function isInTrustList(ctx: Context, repo: string): Promise<boolean> {
-  const repos = await ctx.database.get('github_trusted_repos', { repo })
+  const repos = await ctx.database.get('github_trusted_repos', {repo})
   return repos.length > 0
 }
 
@@ -106,7 +106,7 @@ export async function isInTrustList(ctx: Context, repo: string): Promise<boolean
  * @returns 是否成功启用
  */
 export async function enableRepo(ctx: Context, repo: string): Promise<boolean> {
-  const result = await ctx.database.set('github_trusted_repos', { repo }, {
+  const result = await ctx.database.set('github_trusted_repos', {repo}, {
     enabled: true,
     updatedAt: new Date(),
   })
@@ -121,7 +121,7 @@ export async function enableRepo(ctx: Context, repo: string): Promise<boolean> {
  * @returns 是否成功禁用
  */
 export async function disableRepo(ctx: Context, repo: string): Promise<boolean> {
-  const result = await ctx.database.set('github_trusted_repos', { repo }, {
+  const result = await ctx.database.set('github_trusted_repos', {repo}, {
     enabled: false,
     updatedAt: new Date(),
   })
@@ -135,6 +135,6 @@ export async function disableRepo(ctx: Context, repo: string): Promise<boolean> 
  * @returns 仓库信息，不存在返回 null
  */
 export async function getTrustedRepo(ctx: Context, repo: string): Promise<TrustedRepo | null> {
-  const repos = await ctx.database.get('github_trusted_repos', { repo })
+  const repos = await ctx.database.get('github_trusted_repos', {repo})
   return repos.length > 0 ? repos[0] : null
 }

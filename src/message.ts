@@ -3,8 +3,8 @@
  * 需求: 5.3, 5.4, 5.5
  */
 
-import { h, Element } from 'koishi'
-import { ParsedEvent, getEventEmoji } from './types'
+import {Element, h} from 'koishi'
+import {getEventEmoji, ParsedEvent} from './types'
 
 /**
  * 构建推送消息
@@ -37,14 +37,14 @@ export function buildMessage(event: ParsedEvent): Element[] {
 function buildIssuesMessage(event: ParsedEvent): Element[] {
   const emoji = getEventEmoji(event.type)
   const actionText = getActionText(event.action)
-  
+
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} #${event.number}: ${event.title}`,
     event.url,
   ]
-  
-  return [h('text', { content: lines.join('\n') })]
+
+  return [h('text', {content: lines.join('\n')})]
 }
 
 /**
@@ -56,14 +56,14 @@ function buildIssuesMessage(event: ParsedEvent): Element[] {
 function buildReleaseMessage(event: ParsedEvent): Element[] {
   const emoji = getEventEmoji(event.type)
   const actionText = getActionText(event.action)
-  
+
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} ${event.tagName || event.title}`,
     event.url,
   ]
-  
-  return [h('text', { content: lines.join('\n') })]
+
+  return [h('text', {content: lines.join('\n')})]
 }
 
 
@@ -71,11 +71,11 @@ function buildReleaseMessage(event: ParsedEvent): Element[] {
  * 构建 Push 事件消息
  * 格式: ⬆️ [owner/repo] Commit
  *       user 推送了 3 个提交到 main
- *       
+ *
  *       • abc1234 - 提交消息1
  *       • def5678 - 提交消息2
  *       • ghi9012 - 提交消息3
- *       
+ *
  *       还有 2 条提交...
  *       https://github.com/...
  */
@@ -83,27 +83,27 @@ function buildPushMessage(event: ParsedEvent): Element[] {
   const emoji = getEventEmoji(event.type)
   const commits = event.commits || []
   const totalCommits = event.totalCommits || commits.length
-  
+
   const lines: string[] = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} 推送了 ${totalCommits} 个提交到 ${event.ref}`,
     '',
   ]
-  
+
   // 添加提交列表
   for (const commit of commits) {
     lines.push(`• ${commit.sha} - ${commit.message}`)
   }
-  
+
   // 如果有更多提交，显示提示
   if (totalCommits > commits.length) {
     lines.push('')
     lines.push(`还有 ${totalCommits - commits.length} 条提交...`)
   }
-  
+
   lines.push(event.url)
-  
-  return [h('text', { content: lines.join('\n') })]
+
+  return [h('text', {content: lines.join('\n')})]
 }
 
 /**
@@ -115,14 +115,14 @@ function buildPushMessage(event: ParsedEvent): Element[] {
 function buildPullRequestMessage(event: ParsedEvent): Element[] {
   const emoji = getEventEmoji(event.type)
   const actionText = getActionText(event.action)
-  
+
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} #${event.number}: ${event.title}`,
     event.url,
   ]
-  
-  return [h('text', { content: lines.join('\n') })]
+
+  return [h('text', {content: lines.join('\n')})]
 }
 
 /**
@@ -134,14 +134,14 @@ function buildPullRequestMessage(event: ParsedEvent): Element[] {
 function buildStarMessage(event: ParsedEvent): Element[] {
   const emoji = getEventEmoji(event.type)
   const actionText = event.action === 'created' ? 'starred' : 'unstarred'
-  
+
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} (⭐ ${event.starCount})`,
     event.url,
   ]
-  
-  return [h('text', { content: lines.join('\n') })]
+
+  return [h('text', {content: lines.join('\n')})]
 }
 
 /**
@@ -149,14 +149,14 @@ function buildStarMessage(event: ParsedEvent): Element[] {
  */
 function buildGenericMessage(event: ParsedEvent): Element[] {
   const emoji = getEventEmoji(event.type)
-  
+
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${event.action || 'triggered'}`,
     event.url,
   ]
-  
-  return [h('text', { content: lines.join('\n') })]
+
+  return [h('text', {content: lines.join('\n')})]
 }
 
 /**
@@ -173,6 +173,6 @@ function getActionText(action?: string): string {
     created: 'created',
     deleted: 'deleted',
   }
-  
+
   return actionMap[action || ''] || action || ''
 }

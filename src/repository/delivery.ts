@@ -3,8 +3,8 @@
  * 需求: 1.6
  */
 
-import { Context } from 'koishi'
-import { Delivery } from '../database'
+import {Context} from 'koishi'
+import {Delivery} from '../database'
 
 /**
  * 记录投递
@@ -30,7 +30,7 @@ export async function recordDelivery(
     receivedAt: now,
   })
 
-  const [created] = await ctx.database.get('github_deliveries', { deliveryId })
+  const [created] = await ctx.database.get('github_deliveries', {deliveryId})
   return created
 }
 
@@ -42,7 +42,7 @@ export async function recordDelivery(
  * @returns 是否已投递
  */
 export async function isDelivered(ctx: Context, deliveryId: string): Promise<boolean> {
-  const deliveries = await ctx.database.get('github_deliveries', { deliveryId })
+  const deliveries = await ctx.database.get('github_deliveries', {deliveryId})
   return deliveries.length > 0
 }
 
@@ -53,7 +53,7 @@ export async function isDelivered(ctx: Context, deliveryId: string): Promise<boo
  * @returns 投递记录，不存在返回 null
  */
 export async function getDelivery(ctx: Context, deliveryId: string): Promise<Delivery | null> {
-  const deliveries = await ctx.database.get('github_deliveries', { deliveryId })
+  const deliveries = await ctx.database.get('github_deliveries', {deliveryId})
   return deliveries.length > 0 ? deliveries[0] : null
 }
 
@@ -65,7 +65,7 @@ export async function getDelivery(ctx: Context, deliveryId: string): Promise<Del
  */
 export async function cleanupDeliveries(ctx: Context, beforeDate: Date): Promise<number> {
   const result = await ctx.database.remove('github_deliveries', {
-    receivedAt: { $lt: beforeDate },
+    receivedAt: {$lt: beforeDate},
   })
   return result.removed ?? 0
 }

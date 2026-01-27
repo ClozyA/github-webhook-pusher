@@ -3,10 +3,10 @@
  * 需求: 5.1, 5.2, 5.6, 5.7
  */
 
-import { Context, Element, Logger } from 'koishi'
-import { ParsedEvent, EventType } from './types'
-import { queryTargets as querySubscriptionTargets, PushTarget } from './repository/subscription'
-import { buildMessage } from './message'
+import {Context, Element, Logger} from 'koishi'
+import {EventType, ParsedEvent} from './types'
+import {PushTarget, queryTargets as querySubscriptionTargets} from './repository/subscription'
+import {buildMessage} from './message'
 
 const logger = new Logger('github-webhook-pusher')
 
@@ -55,12 +55,12 @@ async function sendMessage(
 
     // 发送消息到目标频道
     await bot.sendMessage(target.channelId, message, target.guildId)
-    
-    return { target, success: true }
+
+    return {target, success: true}
   } catch (error) {
-    return { 
-      target, 
-      success: false, 
+    return {
+      target,
+      success: false,
       error: error instanceof Error ? error : new Error(String(error))
     }
   }
@@ -88,7 +88,7 @@ export async function pushWithConcurrency(
 
   const results: PushResult[] = []
   const queue = [...targets]
-  
+
   // 创建工作协程
   const workers = Array(Math.min(concurrency, queue.length))
     .fill(null)
@@ -96,10 +96,10 @@ export async function pushWithConcurrency(
       while (queue.length > 0) {
         const target = queue.shift()
         if (!target) break
-        
+
         const result = await sendMessage(ctx, target, message)
         results.push(result)
-        
+
         // 需求 5.7: 推送失败记录错误日志但不影响其他目标
         if (!result.success && result.error) {
           logger.error(
@@ -108,7 +108,7 @@ export async function pushWithConcurrency(
         }
       }
     })
-  
+
   await Promise.all(workers)
   return results
 }
@@ -127,26 +127,26 @@ export async function pushMessage(
 ): Promise<PushResult[]> {
   // 查询订阅目标
   const targets = await queryTargets(ctx, event.repo, event.type)
-  
+
   if (targets.length === 0) {
     logger.debug(`仓库 ${event.repo} 的 ${event.type} 事件没有订阅目标`)
     return []
   }
-  
+
   logger.info(`准备推送 ${event.type} 事件到 ${targets.length} 个目标`)
-  
+
   // 构建消息
   const message = buildMessage(event)
-  
+
   // 并发推送
   const results = await pushWithConcurrency(ctx, targets, message, concurrency)
-  
+
   // 统计结果
   const successCount = results.filter(r => r.success).length
   const failCount = results.filter(r => !r.success).length
-  
+
   logger.info(`推送完成: 成功 ${successCount}, 失败 ${failCount}`)
-  
+
   return results
 }
 
@@ -164,7 +164,7 @@ export async function pushEvent(
   concurrency: number = 5
 ): Promise<{ pushed: number; failed: number; results: PushResult[] }> {
   const results = await pushMessage(ctx, event, concurrency)
-  
+
   return {
     pushed: results.filter(r => r.success).length,
     failed: results.filter(r => !r.success).length,

@@ -3,9 +3,9 @@
  * 需求: 3.1-3.7, 5.1, 5.2
  */
 
-import { Context } from 'koishi'
-import { Subscription } from '../database'
-import { EventType } from '../types'
+import {Context} from 'koishi'
+import {Subscription} from '../database'
+import {EventType} from '../types'
 
 /** 推送目标信息 */
 export interface PushTarget {
@@ -198,7 +198,7 @@ export async function getRepoSubscriptions(
   ctx: Context,
   repo: string
 ): Promise<Subscription[]> {
-  return ctx.database.get('github_subscriptions', { repo })
+  return ctx.database.get('github_subscriptions', {repo})
 }
 
 /**

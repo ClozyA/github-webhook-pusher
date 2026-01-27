@@ -3,14 +3,12 @@
  * 需求: 1.1-1.6, 2.6, 9.1-9.6
  */
 
-import { Context, Logger } from 'koishi'
-import { } from '@koishijs/plugin-server'
-import { Config } from './config'
-import { verifySignature } from './signature'
-import { parseEvent } from './parser'
-import { pushEvent } from './pusher'
-import { isTrusted } from './repository'
-import { isDelivered, recordDelivery } from './repository'
+import {Context, Logger} from 'koishi'
+import {Config} from './config'
+import {verifySignature} from './signature'
+import {parseEvent} from './parser'
+import {pushEvent} from './pusher'
+import {isDelivered, isTrusted, recordDelivery} from './repository'
 
 const logger = new Logger('github-webhook')
 
@@ -57,7 +55,7 @@ export function registerWebhook(ctx: Context, config: Config) {
           // 需求 1.4: 缺少签名头
           logger.warn('请求缺少 X-Hub-Signature-256 头')
           koaCtx.status = 401
-          koaCtx.body = { error: 'Missing signature' }
+          koaCtx.body = {error: 'Missing signature'}
           return
         }
 
@@ -65,7 +63,7 @@ export function registerWebhook(ctx: Context, config: Config) {
           // 需求 1.3, 9.2: 签名验证失败
           logger.warn('签名验证失败')
           koaCtx.status = 401
-          koaCtx.body = { error: 'Invalid signature' }
+          koaCtx.body = {error: 'Invalid signature'}
           return
         }
       }
@@ -79,7 +77,7 @@ export function registerWebhook(ctx: Context, config: Config) {
       } catch (e) {
         logger.warn('无法解析 JSON 负载')
         koaCtx.status = 400
-        koaCtx.body = { error: 'Invalid JSON payload' }
+        koaCtx.body = {error: 'Invalid JSON payload'}
         return
       }
 
@@ -88,7 +86,7 @@ export function registerWebhook(ctx: Context, config: Config) {
       if (!repo) {
         logger.warn('负载中缺少仓库信息')
         koaCtx.status = 400
-        koaCtx.body = { error: 'Missing repository information' }
+        koaCtx.body = {error: 'Missing repository information'}
         return
       }
 
@@ -101,7 +99,7 @@ export function registerWebhook(ctx: Context, config: Config) {
         if (isDuplicate) {
           logger.info(`跳过重复请求: ${deliveryId}`)
           koaCtx.status = 200
-          koaCtx.body = { status: 'duplicate' } as WebhookResponse
+          koaCtx.body = {status: 'duplicate'} as WebhookResponse
           return
         }
       }
@@ -113,7 +111,7 @@ export function registerWebhook(ctx: Context, config: Config) {
           // 需求 9.3: 记录非信任仓库事件
           logger.info(`忽略非信任仓库事件: ${repo}`)
           koaCtx.status = 200
-          koaCtx.body = { status: 'ignored', reason: 'untrusted' } as WebhookResponse
+          koaCtx.body = {status: 'ignored', reason: 'untrusted'} as WebhookResponse
           return
         }
       }
@@ -123,7 +121,7 @@ export function registerWebhook(ctx: Context, config: Config) {
       if (!event) {
         logger.info(`不支持的事件类型: ${eventName}`)
         koaCtx.status = 200
-        koaCtx.body = { status: 'ignored', reason: 'unsupported' } as WebhookResponse
+        koaCtx.body = {status: 'ignored', reason: 'unsupported'} as WebhookResponse
         return
       }
 
@@ -141,7 +139,7 @@ export function registerWebhook(ctx: Context, config: Config) {
 
       // 需求 1.5: 返回成功响应
       koaCtx.status = 200
-      koaCtx.body = { status: 'ok', pushed: result.pushed } as WebhookResponse
+      koaCtx.body = {status: 'ok', pushed: result.pushed} as WebhookResponse
 
     } catch (error) {
       // 需求 9.5: 记录错误
@@ -153,7 +151,7 @@ export function registerWebhook(ctx: Context, config: Config) {
       }
 
       koaCtx.status = 500
-      koaCtx.body = { status: 'error', error: 'Internal server error' } as WebhookResponse
+      koaCtx.body = {status: 'error', error: 'Internal server error'} as WebhookResponse
     }
   })
 }
