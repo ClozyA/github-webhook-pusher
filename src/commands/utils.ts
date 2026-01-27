@@ -8,7 +8,9 @@ import {Config} from '../config'
 import {EventType, EVENT_DISPLAY_MAP, ParsedEvent, getDisplayType} from '../types'
 import {listTrustedRepos} from '../repository/trust'
 import {buildMessage} from '../message'
-import {name} from '../index'
+
+/** 插件名称（避免循环依赖） */
+const PLUGIN_NAME = 'github-webhook-pusher'
 
 /** 管理员权限等级 */
 const ADMIN_AUTHORITY = 3
@@ -87,7 +89,7 @@ export function registerUtilCommands(ctx: Context, config: Config) {
 
       const lines = [
         '🏓 GitHub Webhook 推送插件',
-        `📦 插件名称: ${name}`,
+        `📦 插件名称: ${PLUGIN_NAME}`,
         `🔗 Webhook 路径: ${config.path}`,
         `📋 信任仓库: ${repos.length} 个 (${enabledCount} 个已启用)`,
         `🔧 调试模式: ${config.debug ? '开启' : '关闭'}`,

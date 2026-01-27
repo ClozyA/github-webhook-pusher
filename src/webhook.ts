@@ -4,11 +4,21 @@
  */
 
 import {Context, Logger} from 'koishi'
+import type {Context as KoaContext} from 'koa'
 import {Config} from './config'
 import {verifySignature} from './signature'
 import {parseEvent} from './parser'
 import {pushEvent} from './pusher'
 import {isDelivered, isTrusted, recordDelivery} from './repository'
+
+// 声明 server 服务类型
+declare module 'koishi' {
+  interface Context {
+    server: {
+      post(path: string, handler: (ctx: KoaContext) => Promise<void>): void
+    }
+  }
+}
 
 const logger = new Logger('github-webhook')
 
@@ -32,7 +42,7 @@ export function registerWebhook(ctx: Context, config: Config) {
   logger.info(`注册 Webhook 处理器: ${path}`)
 
   // 使用 ctx.server.post 注册 HTTP POST 路由
-  ctx.server.post(path, async (koaCtx) => {
+  ctx.server.post(path, async (koaCtx: KoaContext) => {
     const startTime = Date.now()
 
     try {
