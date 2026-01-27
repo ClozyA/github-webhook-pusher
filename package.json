@@ -44,7 +44,10 @@
       "en": "Receive GitHub Webhook events and push to chat groups, supporting Issues, Release, Push, PR, Star events"
     },
     "service": {
-      "required": ["server", "database"],
+      "required": [
+        "server",
+        "database"
+      ],
       "optional": [],
       "implements": []
     }
