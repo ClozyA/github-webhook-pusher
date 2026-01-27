@@ -1,0 +1,183 @@
+/**
+ * 订阅管理命令
+ * 需求: 3.1-3.7
+ */
+
+import {Context} from 'koishi'
+import {Config} from '../config'
+import {EventType, EVENT_DISPLAY_MAP} from '../types'
+import {isInTrustList} from '../repository/trust'
+import {
+  createSubscription,
+  removeSubscription,
+  listSubscriptions,
+  getSubscription,
+  updateEvents,
+  SessionIdentifier,
+} from '../repository/subscription'
+
+/** 所有支持的事件类型 */
+const ALL_EVENT_TYPES: EventType[] = ['issues', 'release', 'push', 'pull_request', 'star']
+
+/**
+ * 从会话中提取会话标识
+ */
+function getSessionIdentifier(session: any): SessionIdentifier {
+  return {
+    platform: session.platform,
+    channelId: session.channelId,
+    guildId: session.guildId,
+    userId: session.userId,
+  }
+}
+
+/**
+ * 解析事件变更参数
+ * 格式: +issues -star +release
+ * @param changes 变更参数数组
+ * @param currentEvents 当前事件列表
+ * @returns 新的事件列表
+ */
+function parseEventChanges(changes: string[], currentEvents: EventType[]): EventType[] {
+  const events = new Set(currentEvents)
+
+  for (const change of changes) {
+    if (!change) continue
+
+    const prefix = change[0]
+    const eventName = change.slice(1) as EventType
+
+    // 验证事件类型
+    if (!ALL_EVENT_TYPES.includes(eventName)) {
+      continue
+    }
+
+    if (prefix === '+') {
+      events.add(eventName)
+    } else if (prefix === '-') {
+      events.delete(eventName)
+    }
+  }
+
+  return Array.from(events)
+}
+
+
+/**
+ * 注册订阅管理命令
+ * @param ctx Koishi 上下文
+ * @param config 插件配置
+ */
+export function registerSubscriptionCommands(ctx: Context, config: Config) {
+  // gh.sub <repo> - 订阅仓库
+  ctx.command('gh.sub <repo:string>', '订阅 GitHub 仓库事件')
+    .usage('gh.sub owner/repo')
+    .example('gh.sub koishijs/koishi')
+    .action(async ({session}, repo) => {
+      if (!session) return '❌ 无法获取会话信息'
+
+      if (!repo) {
+        return '❌ 请指定仓库名，格式: owner/repo'
+      }
+
+      // 检查仓库是否在信任列表中
+      const trusted = await isInTrustList(ctx, repo)
+      if (!trusted) {
+        return '❌ 该仓库不在信任列表中'
+      }
+
+      const sessionId = getSessionIdentifier(session)
+      const subscription = await createSubscription(ctx, sessionId, repo, config.defaultEvents)
+
+      if (subscription) {
+        const eventList = subscription.events.join(', ')
+        return `✅ 已订阅仓库: ${repo}\n📋 订阅事件: ${eventList}`
+      }
+      return '❌ 订阅失败'
+    })
+
+  // gh.unsub <repo> - 取消订阅
+  ctx.command('gh.unsub <repo:string>', '取消订阅 GitHub 仓库')
+    .usage('gh.unsub owner/repo')
+    .example('gh.unsub koishijs/koishi')
+    .action(async ({session}, repo) => {
+      if (!session) return '❌ 无法获取会话信息'
+
+      if (!repo) {
+        return '❌ 请指定仓库名'
+      }
+
+      const sessionId = getSessionIdentifier(session)
+      const success = await removeSubscription(ctx, sessionId, repo)
+
+      if (success) {
+        return `✅ 已取消订阅: ${repo}`
+      }
+      return `❌ 未找到仓库 ${repo} 的订阅`
+    })
+
+
+  // gh.list - 列出当前会话的所有订阅
+  ctx.command('gh.list', '列出当前会话的所有订阅')
+    .usage('gh.list')
+    .action(async ({session}) => {
+      if (!session) return '❌ 无法获取会话信息'
+
+      const sessionId = getSessionIdentifier(session)
+      const subscriptions = await listSubscriptions(ctx, sessionId)
+
+      if (subscriptions.length === 0) {
+        return '📋 当前会话没有订阅任何仓库'
+      }
+
+      const lines = ['📋 订阅列表:']
+      for (const sub of subscriptions) {
+        const status = sub.enabled ? '✅' : '⏸️'
+        const events = sub.events.join(', ')
+        lines.push(`${status} ${sub.repo}`)
+        lines.push(`   事件: ${events}`)
+      }
+      return lines.join('\n')
+    })
+
+  // gh.events <repo> [...changes] - 查看或修改订阅事件
+  ctx.command('gh.events <repo:string> [...changes:string]', '查看或修改订阅的事件类型')
+    .usage('gh.events owner/repo [+event] [-event]')
+    .example('gh.events koishijs/koishi')
+    .example('gh.events koishijs/koishi +issues -star +release')
+    .action(async ({session}, repo, ...changes) => {
+      if (!session) return '❌ 无法获取会话信息'
+
+      if (!repo) {
+        // 显示所有可用事件类型
+        const lines = ['📋 可用事件类型:']
+        for (const [type, info] of Object.entries(EVENT_DISPLAY_MAP)) {
+          lines.push(`${info.emoji} ${type} - ${info.name}`)
+        }
+        return lines.join('\n')
+      }
+
+      const sessionId = getSessionIdentifier(session)
+      const subscription = await getSubscription(ctx, sessionId, repo)
+
+      if (!subscription) {
+        return `❌ 未找到仓库 ${repo} 的订阅`
+      }
+
+      // 如果没有变更参数，只显示当前事件
+      if (!changes || changes.length === 0) {
+        const events = subscription.events.join(', ')
+        return `📋 ${repo} 订阅的事件:\n${events}`
+      }
+
+      // 解析并应用变更
+      const newEvents = parseEventChanges(changes, subscription.events)
+      const success = await updateEvents(ctx, sessionId, repo, newEvents)
+
+      if (success) {
+        const eventList = newEvents.join(', ')
+        return `✅ 已更新 ${repo} 的订阅事件:\n${eventList}`
+      }
+      return '❌ 更新失败'
+    })
+}
