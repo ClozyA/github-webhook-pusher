@@ -2,14 +2,14 @@
 
 [![npm](https://img.shields.io/npm/v/koishi-plugin-github-webhook-pusher?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-github-webhook-pusher)
 
-Koishi 机器人框架的 GitHub Webhook 推送插件，支持将 GitHub 仓库事件（Issues、Release、Push、PR、Star）推送到 QQ 群聊或私聊。
+Koishi 机器人框架的 GitHub Webhook 推送插件，支持将 GitHub 仓库事件推送到 QQ 群聊或私聊。
 
 ## 功能特性
 
 - 🔐 **安全验证** - 支持 HMAC SHA256 签名验证，确保 Webhook 请求来源可信
 - 📋 **信任仓库管理** - 管理员可控制哪些仓库的事件可以被处理
 - 🔔 **灵活订阅** - 用户可自由订阅感兴趣的仓库和事件类型
-- 📨 **多事件支持** - 支持 Issues、Release、Push、Pull Request、Star 等事件
+- 📨 **多事件支持** - 支持 Issues、Issue Comment、Pull Request、Review、Release、Push、Star、Fork 等常用事件
 - 🚀 **并发推送** - 支持并发推送到多个订阅目标，可配置并发数
 - 💾 **数据持久化** - 订阅和信任仓库数据持久化存储
 
@@ -74,10 +74,17 @@ https://your-koishi-server.com/github/webhook
    - **Secret**: 与插件配置中的 `secret` 保持一致
    - **Which events would you like to trigger this webhook?**: 选择需要的事件
      - Issues
+     - Issue comments
+     - Pull requests
+     - Pull request reviews
+     - Pull request review comments
      - Releases
      - Pushes
-     - Pull requests
      - Stars (Watch)
+     - Forks
+     - Create
+     - Delete
+     - Workflow runs
 4. 点击 **Add webhook** 保存
 
 ### 3. 验证配置
@@ -108,8 +115,9 @@ https://your-koishi-server.com/github/webhook
 | `gh.sub <repo>` | 订阅仓库 | `gh.sub koishijs/koishi` |
 | `gh.unsub <repo>` | 取消订阅 | `gh.unsub koishijs/koishi` |
 | `gh.list` | 列出当前会话的所有订阅 | `gh.list` |
-| `gh.events <repo>` | 查看订阅的事件类型 | `gh.events koishijs/koishi` |
-| `gh.events <repo> +/-event` | 修改订阅的事件类型 | `gh.events koishijs/koishi +issues -star` |
+| `gh.events [repo]` | 查看订阅的事件类型（无 repo 时列出所有可用事件） | `gh.events koishijs/koishi` |
+| `gh.on <repo> [...events]` | 快捷启用订阅事件 | `gh.on koishijs/koishi issues pull_request` |
+| `gh.off <repo> [...events]` | 快捷禁用订阅事件 | `gh.off koishijs/koishi issues pull_request` |
 
 ### 工具命令
 
@@ -123,10 +131,17 @@ https://your-koishi-server.com/github/webhook
 | 事件类型 | 显示名称 | Emoji | 说明 |
 |----------|----------|-------|------|
 | `issues` | Issue | 📌 | Issue 的创建、关闭、重新打开、编辑 |
-| `release` | Release | 🚀 | 版本发布 |
-| `push` | Commit | ⬆️ | 代码推送（最多显示 5 条提交） |
+| `issue_comment` | Issue Comment | 💬 | Issue 评论的创建、编辑、删除 |
 | `pull_request` | PR | 🔀 | Pull Request 的创建、关闭、合并 |
+| `pull_request_review` | PR Review | 🧪 | PR Review 的提交、编辑、撤销 |
+| `pull_request_review_comment` | PR Review Comment | 💬 | PR Review 评论的创建、编辑、删除 |
+| `release` | Release | 🚀 | 版本发布 |
+| `push` | Commit | ⬆️ | 代码推送（最多显示 3 条提交） |
 | `star` | Star | ⭐ | Star 操作 |
+| `fork` | Fork | 🍴 | Fork 操作 |
+| `create` | Create | ✨ | 分支/标签创建 |
+| `delete` | Delete | 🗑️ | 分支/标签删除 |
+| `workflow_run` | Workflow | 🧩 | Workflow 运行 |
 
 ## 消息格式示例
 
@@ -178,10 +193,9 @@ https://github.com/owner/repo/releases/tag/v1.0.0
 
 ### Q: 如何修改订阅的事件类型？
 
-**A:** 使用 `gh.events` 命令：
-- 添加事件：`gh.events owner/repo +issues +release`
-- 移除事件：`gh.events owner/repo -star -push`
-- 混合操作：`gh.events owner/repo +issues -star`
+**A:** 使用 `gh.on` / `gh.off` 命令：
+- 启用事件：`gh.on owner/repo issues release`
+- 禁用事件：`gh.off owner/repo star push`
 
 ### Q: 如何查看当前订阅了哪些仓库？
 
