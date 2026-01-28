@@ -21,6 +21,7 @@
     "test": "vitest --run",
     "test:watch": "vitest",
     "build": "tsc -p tsconfig.json",
+    "build:ci": "tsc -p tsconfig.github.json",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

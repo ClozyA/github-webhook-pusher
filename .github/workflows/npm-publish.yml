@@ -19,7 +19,7 @@ jobs:
       - run: npm install
 
       # 必须有 build（比如 tsc 编译到 lib/）
-      - run: npm run build
+      - run: npm run build:ci
 
   publish-npm:
     needs: build
@@ -36,7 +36,7 @@ jobs:
       - run: npm install
 
       # 发布前构建（即使你有 prepublishOnly，这里显式跑也更清晰）
-      - run: npm run build --if-present
+      - run: npm run build:ci --if-present
 
       - run: npm publish
         env:
