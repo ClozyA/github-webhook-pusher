@@ -12,6 +12,7 @@ import {
   removeSubscription,
   listSubscriptions,
   getSubscription,
+  updateEvents,
   SessionIdentifier,
 } from '../repository/subscription'
 
@@ -155,8 +156,8 @@ export function registerSubscriptionCommands(ctx: Context, config: Config) {
     })
 
   // gh.events <repo> - 查看订阅事件
-  ctx.command('gh.events <repo:string>', '查看订阅的事件类型')
-    .usage('gh.events owner/repo')
+  ctx.command('gh.events [repo:string]', '查看订阅的事件类型')
+    .usage('gh.events [owner/repo]')
     .example('gh.events koishijs/koishi')
     .action(async ({session}, repo) => {
       if (!session) return '❌ 无法获取会话信息'
@@ -192,7 +193,11 @@ export function registerSubscriptionCommands(ctx: Context, config: Config) {
       }
 
       if (!events || events.length === 0) {
-        return `❌ 请指定事件类型\n可用类型: ${ALL_EVENT_TYPES.join(', ')}`
+        const eventList = ALL_EVENT_TYPES.map(e => {
+          const info = EVENT_DISPLAY_MAP[e]
+          return `${info.emoji} ${e}`
+        }).join(', ')
+        return `❌ 请指定事件类型\n可用类型: ${eventList}`
       }
 
       const sessionId = getSessionIdentifier(session)
@@ -224,7 +229,11 @@ export function registerSubscriptionCommands(ctx: Context, config: Config) {
       }
 
       if (!events || events.length === 0) {
-        return `❌ 请指定事件类型\n可用类型: ${ALL_EVENT_TYPES.join(', ')}`
+        const eventList = ALL_EVENT_TYPES.map(e => {
+          const info = EVENT_DISPLAY_MAP[e]
+          return `${info.emoji} ${e}`
+        }).join(', ')
+        return `❌ 请指定事件类型\n可用类型: ${eventList}`
       }
 
       const sessionId = getSessionIdentifier(session)
