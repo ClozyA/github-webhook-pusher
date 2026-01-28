@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-github-webhook-pusher",
   "description": "GitHub Webhook 事件推送插件",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "contributors": [
     "ClozyA <aoxuan233@gmail.com>"
   ],
@@ -19,7 +19,9 @@
   "license": "MIT",
   "scripts": {
     "test": "vitest --run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "chatbot",
