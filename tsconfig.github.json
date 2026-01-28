@@ -5,6 +5,9 @@
       "node"
     ],
     "incremental": false,
-    "composite": false
+    "composite": false,
+    "emitDeclarationOnly": false,
+    "module": "commonjs",
+    "moduleResolution": "node"
   }
 }
