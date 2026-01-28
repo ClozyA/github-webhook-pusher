@@ -34,6 +34,30 @@ export function parseIssuesEvent(payload: any): ParsedEvent | null {
 }
 
 /**
+ * 解析 Issue Comment 事件
+ */
+export function parseIssueCommentEvent(payload: any): ParsedEvent | null {
+  const {action, issue, comment, repository, sender} = payload
+
+  // 只处理 created/edited/deleted 动作
+  if (!['created', 'edited', 'deleted'].includes(action)) {
+    return null
+  }
+
+  return {
+    type: 'issue_comment',
+    displayType: getDisplayType('issue_comment'),
+    repo: repository.full_name,
+    actor: sender.login,
+    action,
+    title: issue.title,
+    number: issue.number,
+    url: comment?.html_url || issue.html_url,
+    body: comment?.body,
+  }
+}
+
+/**
  * 解析 Release 事件
  * 需求 4.2: 提取版本号、发布者和下载链接
  */
@@ -123,6 +147,54 @@ export function parsePullRequestEvent(payload: any): ParsedEvent | null {
 }
 
 /**
+ * 解析 Pull Request Review 事件
+ */
+export function parsePullRequestReviewEvent(payload: any): ParsedEvent | null {
+  const {action, review, pull_request, repository, sender} = payload
+
+  // 只处理 submitted/edited/dismissed 动作
+  if (!['submitted', 'edited', 'dismissed'].includes(action)) {
+    return null
+  }
+
+  return {
+    type: 'pull_request_review',
+    displayType: getDisplayType('pull_request_review'),
+    repo: repository.full_name,
+    actor: sender.login,
+    action: review?.state || action,
+    title: pull_request.title,
+    number: pull_request.number,
+    url: review?.html_url || pull_request.html_url,
+    body: review?.body,
+  }
+}
+
+/**
+ * 解析 Pull Request Review Comment 事件
+ */
+export function parsePullRequestReviewCommentEvent(payload: any): ParsedEvent | null {
+  const {action, comment, pull_request, repository, sender} = payload
+
+  // 只处理 created/edited/deleted 动作
+  if (!['created', 'edited', 'deleted'].includes(action)) {
+    return null
+  }
+
+  return {
+    type: 'pull_request_review_comment',
+    displayType: getDisplayType('pull_request_review_comment'),
+    repo: repository.full_name,
+    actor: sender.login,
+    action,
+    title: pull_request.title,
+    number: pull_request.number,
+    url: comment?.html_url || pull_request.html_url,
+    body: comment?.body,
+  }
+}
+
+/**
  * 解析 Star 事件
  * 需求 4.5: 提取操作者和当前 star 数量
  */
@@ -146,6 +218,81 @@ export function parseStarEvent(payload: any): ParsedEvent | null {
 }
 
 /**
+ * 解析 Fork 事件
+ */
+export function parseForkEvent(payload: any): ParsedEvent | null {
+  const {forkee, repository, sender} = payload
+
+  return {
+    type: 'fork',
+    displayType: getDisplayType('fork'),
+    repo: repository.full_name,
+    actor: sender.login,
+    action: 'forked',
+    title: forkee?.full_name,
+    url: forkee?.html_url || repository.html_url,
+  }
+}
+
+/**
+ * 解析 Create 事件
+ */
+export function parseCreateEvent(payload: any): ParsedEvent | null {
+  const {ref, ref_type, repository, sender} = payload
+
+  return {
+    type: 'create',
+    displayType: getDisplayType('create'),
+    repo: repository.full_name,
+    actor: sender.login,
+    action: 'created',
+    ref: ref ? `${ref_type}:${ref}` : ref_type,
+    url: repository.html_url,
+  }
+}
+
+/**
+ * 解析 Delete 事件
+ */
+export function parseDeleteEvent(payload: any): ParsedEvent | null {
+  const {ref, ref_type, repository, sender} = payload
+
+  return {
+    type: 'delete',
+    displayType: getDisplayType('delete'),
+    repo: repository.full_name,
+    actor: sender.login,
+    action: 'deleted',
+    ref: ref ? `${ref_type}:${ref}` : ref_type,
+    url: repository.html_url,
+  }
+}
+
+/**
+ * 解析 Workflow Run 事件
+ */
+export function parseWorkflowRunEvent(payload: any): ParsedEvent | null {
+  const {action, workflow_run, repository, sender} = payload
+
+  // 只处理 requested/completed 动作
+  if (!['requested', 'completed'].includes(action)) {
+    return null
+  }
+
+  const conclusion = workflow_run?.conclusion ? `/${workflow_run.conclusion}` : ''
+
+  return {
+    type: 'workflow_run',
+    displayType: getDisplayType('workflow_run'),
+    repo: repository.full_name,
+    actor: sender.login,
+    action: `${action}${conclusion}`,
+    title: workflow_run?.name,
+    url: workflow_run?.html_url || repository.html_url,
+  }
+}
+
+/**
  * 统一的事件解析入口函数
  * @param eventName X-GitHub-Event 头的值
  * @param payload 解析后的 JSON 负载
@@ -155,14 +302,28 @@ export function parseEvent(eventName: string, payload: any): ParsedEvent | null 
   switch (eventName) {
     case 'issues':
       return parseIssuesEvent(payload)
+    case 'issue_comment':
+      return parseIssueCommentEvent(payload)
     case 'release':
       return parseReleaseEvent(payload)
     case 'push':
       return parsePushEvent(payload)
     case 'pull_request':
       return parsePullRequestEvent(payload)
+    case 'pull_request_review':
+      return parsePullRequestReviewEvent(payload)
+    case 'pull_request_review_comment':
+      return parsePullRequestReviewCommentEvent(payload)
     case 'star':
       return parseStarEvent(payload)
+    case 'fork':
+      return parseForkEvent(payload)
+    case 'create':
+      return parseCreateEvent(payload)
+    case 'delete':
+      return parseDeleteEvent(payload)
+    case 'workflow_run':
+      return parseWorkflowRunEvent(payload)
     default:
       return null
   }

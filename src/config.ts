@@ -21,7 +21,20 @@ export interface Config {
 }
 
 /** 支持的事件类型列表 */
-const EVENT_TYPES: EventType[] = ['issues', 'release', 'push', 'pull_request', 'star']
+const EVENT_TYPES: EventType[] = [
+  'issues',
+  'issue_comment',
+  'pull_request',
+  'pull_request_review',
+  'pull_request_review_comment',
+  'release',
+  'push',
+  'star',
+  'fork',
+  'create',
+  'delete',
+  'workflow_run',
+]
 
 export const Config: Schema<Config> = Schema.object({
   path: Schema.string().default('/github/webhook').description('Webhook 接收路径'),

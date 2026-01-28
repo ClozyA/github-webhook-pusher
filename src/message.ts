@@ -15,14 +15,28 @@ export function buildMessage(event: ParsedEvent): Element[] {
   switch (event.type) {
     case 'issues':
       return buildIssuesMessage(event)
+    case 'issue_comment':
+      return buildIssueCommentMessage(event)
     case 'release':
       return buildReleaseMessage(event)
     case 'push':
       return buildPushMessage(event)
     case 'pull_request':
       return buildPullRequestMessage(event)
+    case 'pull_request_review':
+      return buildPullRequestReviewMessage(event)
+    case 'pull_request_review_comment':
+      return buildPullRequestReviewCommentMessage(event)
     case 'star':
       return buildStarMessage(event)
+    case 'fork':
+      return buildForkMessage(event)
+    case 'create':
+      return buildCreateMessage(event)
+    case 'delete':
+      return buildDeleteMessage(event)
+    case 'workflow_run':
+      return buildWorkflowRunMessage(event)
     default:
       return buildGenericMessage(event)
   }
@@ -35,6 +49,19 @@ export function buildMessage(event: ParsedEvent): Element[] {
  *       https://github.com/...
  */
 function buildIssuesMessage(event: ParsedEvent): Element[] {
+  const emoji = getEventEmoji(event.type)
+  const actionText = getActionText(event.action)
+
+  const lines = [
+    `${emoji} [${event.repo}] ${event.displayType}`,
+    `${event.actor} ${actionText} #${event.number}: ${event.title}`,
+    event.url,
+  ]
+
+  return [h('text', {content: lines.join('\n')})]
+}
+
+function buildIssueCommentMessage(event: ParsedEvent): Element[] {
   const emoji = getEventEmoji(event.type)
   const actionText = getActionText(event.action)
 
@@ -125,6 +152,32 @@ function buildPullRequestMessage(event: ParsedEvent): Element[] {
   return [h('text', {content: lines.join('\n')})]
 }
 
+function buildPullRequestReviewMessage(event: ParsedEvent): Element[] {
+  const emoji = getEventEmoji(event.type)
+  const actionText = getActionText(event.action)
+
+  const lines = [
+    `${emoji} [${event.repo}] ${event.displayType}`,
+    `${event.actor} ${actionText} #${event.number}: ${event.title}`,
+    event.url,
+  ]
+
+  return [h('text', {content: lines.join('\n')})]
+}
+
+function buildPullRequestReviewCommentMessage(event: ParsedEvent): Element[] {
+  const emoji = getEventEmoji(event.type)
+  const actionText = getActionText(event.action)
+
+  const lines = [
+    `${emoji} [${event.repo}] ${event.displayType}`,
+    `${event.actor} ${actionText} #${event.number}: ${event.title}`,
+    event.url,
+  ]
+
+  return [h('text', {content: lines.join('\n')})]
+}
+
 /**
  * 构建 Star 事件消息
  * 格式: ⭐ [owner/repo] Star
@@ -138,6 +191,61 @@ function buildStarMessage(event: ParsedEvent): Element[] {
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} (⭐ ${event.starCount})`,
+    event.url,
+  ]
+
+  return [h('text', {content: lines.join('\n')})]
+}
+
+function buildForkMessage(event: ParsedEvent): Element[] {
+  const emoji = getEventEmoji(event.type)
+  const target = event.title ? ` -> ${event.title}` : ''
+
+  const lines = [
+    `${emoji} [${event.repo}] ${event.displayType}`,
+    `${event.actor} forked${target}`,
+    event.url,
+  ]
+
+  return [h('text', {content: lines.join('\n')})]
+}
+
+function buildCreateMessage(event: ParsedEvent): Element[] {
+  const emoji = getEventEmoji(event.type)
+  const actionText = getActionText(event.action)
+  const refText = event.ref ? ` ${event.ref}` : ''
+
+  const lines = [
+    `${emoji} [${event.repo}] ${event.displayType}`,
+    `${event.actor} ${actionText}${refText}`,
+    event.url,
+  ]
+
+  return [h('text', {content: lines.join('\n')})]
+}
+
+function buildDeleteMessage(event: ParsedEvent): Element[] {
+  const emoji = getEventEmoji(event.type)
+  const actionText = getActionText(event.action)
+  const refText = event.ref ? ` ${event.ref}` : ''
+
+  const lines = [
+    `${emoji} [${event.repo}] ${event.displayType}`,
+    `${event.actor} ${actionText}${refText}`,
+    event.url,
+  ]
+
+  return [h('text', {content: lines.join('\n')})]
+}
+
+function buildWorkflowRunMessage(event: ParsedEvent): Element[] {
+  const emoji = getEventEmoji(event.type)
+  const actionText = getActionText(event.action)
+  const nameText = event.title ? ` ${event.title}` : ''
+
+  const lines = [
+    `${emoji} [${event.repo}] ${event.displayType}`,
+    `${event.actor} ${actionText}${nameText}`,
     event.url,
   ]
 
@@ -172,6 +280,14 @@ function getActionText(action?: string): string {
     published: 'published',
     created: 'created',
     deleted: 'deleted',
+    submitted: 'submitted',
+    dismissed: 'dismissed',
+    approved: 'approved',
+    changes_requested: 'changes requested',
+    commented: 'commented',
+    requested: 'requested',
+    completed: 'completed',
+    forked: 'forked',
   }
 
   return actionMap[action || ''] || action || ''

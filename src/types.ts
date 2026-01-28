@@ -4,7 +4,19 @@
  */
 
 /** 支持的事件类型 */
-export type EventType = 'issues' | 'release' | 'push' | 'pull_request' | 'star'
+export type EventType =
+  | 'issues'
+  | 'issue_comment'
+  | 'pull_request'
+  | 'pull_request_review'
+  | 'pull_request_review_comment'
+  | 'release'
+  | 'push'
+  | 'star'
+  | 'fork'
+  | 'create'
+  | 'delete'
+  | 'workflow_run'
 
 /** 提交信息 */
 export interface CommitInfo {
@@ -41,10 +53,17 @@ export interface EventDisplayInfo {
 /** 事件类型到显示名称和 emoji 的映射 */
 export const EVENT_DISPLAY_MAP: Record<EventType, EventDisplayInfo> = {
   issues: {name: 'Issue', emoji: '📌'},
+  issue_comment: {name: 'Issue Comment', emoji: '💬'},
   release: {name: 'Release', emoji: '🚀'},
   push: {name: 'Commit', emoji: '⬆️'},
   pull_request: {name: 'PR', emoji: '🔀'},
+  pull_request_review: {name: 'PR Review', emoji: '🧪'},
+  pull_request_review_comment: {name: 'PR Review Comment', emoji: '💬'},
   star: {name: 'Star', emoji: '⭐'},
+  fork: {name: 'Fork', emoji: '🍴'},
+  create: {name: 'Create', emoji: '✨'},
+  delete: {name: 'Delete', emoji: '🗑️'},
+  workflow_run: {name: 'Workflow', emoji: '🧩'},
 }
 
 /**

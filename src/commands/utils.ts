@@ -16,7 +16,20 @@ const PLUGIN_NAME = 'github-webhook-pusher'
 const ADMIN_AUTHORITY = 3
 
 /** 所有支持的事件类型 */
-const ALL_EVENT_TYPES: EventType[] = ['issues', 'release', 'push', 'pull_request', 'star']
+const ALL_EVENT_TYPES: EventType[] = [
+  'issues',
+  'issue_comment',
+  'pull_request',
+  'pull_request_review',
+  'pull_request_review_comment',
+  'release',
+  'push',
+  'star',
+  'fork',
+  'create',
+  'delete',
+  'workflow_run',
+]
 
 /**
  * 生成测试事件数据
@@ -35,6 +48,13 @@ function generateTestEvent(repo: string, eventType: EventType): ParsedEvent {
       return {
         ...baseEvent,
         action: 'opened',
+        title: '测试 Issue 标题',
+        number: 123,
+      }
+    case 'issue_comment':
+      return {
+        ...baseEvent,
+        action: 'created',
         title: '测试 Issue 标题',
         number: 123,
       }
@@ -62,11 +82,49 @@ function generateTestEvent(repo: string, eventType: EventType): ParsedEvent {
         title: '测试 PR 标题',
         number: 456,
       }
+    case 'pull_request_review':
+      return {
+        ...baseEvent,
+        action: 'approved',
+        title: '测试 PR 标题',
+        number: 456,
+      }
+    case 'pull_request_review_comment':
+      return {
+        ...baseEvent,
+        action: 'created',
+        title: '测试 PR 标题',
+        number: 456,
+      }
     case 'star':
       return {
         ...baseEvent,
         action: 'created',
         starCount: 1234,
+      }
+    case 'fork':
+      return {
+        ...baseEvent,
+        action: 'forked',
+        title: `${repo}-fork`,
+      }
+    case 'create':
+      return {
+        ...baseEvent,
+        action: 'created',
+        ref: 'branch:feature/test',
+      }
+    case 'delete':
+      return {
+        ...baseEvent,
+        action: 'deleted',
+        ref: 'branch:feature/old',
+      }
+    case 'workflow_run':
+      return {
+        ...baseEvent,
+        action: 'completed/success',
+        title: 'CI',
       }
     default:
       return baseEvent

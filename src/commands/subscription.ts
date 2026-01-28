@@ -12,12 +12,24 @@ import {
   removeSubscription,
   listSubscriptions,
   getSubscription,
-  updateEvents,
   SessionIdentifier,
 } from '../repository/subscription'
 
 /** 所有支持的事件类型 */
-const ALL_EVENT_TYPES: EventType[] = ['issues', 'release', 'push', 'pull_request', 'star']
+const ALL_EVENT_TYPES: EventType[] = [
+  'issues',
+  'issue_comment',
+  'pull_request',
+  'pull_request_review',
+  'pull_request_review_comment',
+  'release',
+  'push',
+  'star',
+  'fork',
+  'create',
+  'delete',
+  'workflow_run',
+]
 
 /**
  * 从会话中提取会话标识
@@ -69,6 +81,8 @@ function parseEventChanges(changes: string[], currentEvents: EventType[]): Event
  * @param config 插件配置
  */
 export function registerSubscriptionCommands(ctx: Context, config: Config) {
+  ctx.command('gh', 'GitHub Webhook 指令')
+
   // gh.sub <repo> - 订阅仓库
   ctx.command('gh.sub <repo:string>', '订阅 GitHub 仓库事件')
     .usage('gh.sub owner/repo')
@@ -140,12 +154,11 @@ export function registerSubscriptionCommands(ctx: Context, config: Config) {
       return lines.join('\n')
     })
 
-  // gh.events <repo> [...changes] - 查看或修改订阅事件
-  ctx.command('gh.events <repo:string> [...changes:string]', '查看或修改订阅的事件类型')
-    .usage('gh.events owner/repo [+event] [-event]')
+  // gh.events <repo> - 查看订阅事件
+  ctx.command('gh.events <repo:string>', '查看订阅的事件类型')
+    .usage('gh.events owner/repo')
     .example('gh.events koishijs/koishi')
-    .example('gh.events koishijs/koishi +issues -star +release')
-    .action(async ({session}, repo, ...changes) => {
+    .action(async ({session}, repo) => {
       if (!session) return '❌ 无法获取会话信息'
 
       if (!repo) {
@@ -164,19 +177,70 @@ export function registerSubscriptionCommands(ctx: Context, config: Config) {
         return `❌ 未找到仓库 ${repo} 的订阅`
       }
 
-      // 如果没有变更参数，只显示当前事件
-      if (!changes || changes.length === 0) {
-        const events = subscription.events.join(', ')
-        return `📋 ${repo} 订阅的事件:\n${events}`
+      const events = subscription.events.join(', ')
+      return `📋 ${repo} 订阅的事件:\n${events}`
+    })
+
+  ctx.command('gh.on <repo:string> [...events:string]', '快捷启用订阅事件')
+    .usage('gh.on owner/repo issues pull_request')
+    .example('gh.on koishijs/koishi issues pull_request')
+    .action(async ({session}, repo, ...events) => {
+      if (!session) return '❌ 无法获取会话信息'
+
+      if (!repo) {
+        return '❌ 请指定仓库名'
       }
 
-      // 解析并应用变更
+      if (!events || events.length === 0) {
+        return `❌ 请指定事件类型\n可用类型: ${ALL_EVENT_TYPES.join(', ')}`
+      }
+
+      const sessionId = getSessionIdentifier(session)
+      const subscription = await getSubscription(ctx, sessionId, repo)
+
+      if (!subscription) {
+        return `❌ 未找到仓库 ${repo} 的订阅`
+      }
+
+      const changes = events.map(event => `+${event}`)
       const newEvents = parseEventChanges(changes, subscription.events)
       const success = await updateEvents(ctx, sessionId, repo, newEvents)
 
       if (success) {
         const eventList = newEvents.join(', ')
-        return `✅ 已更新 ${repo} 的订阅事件:\n${eventList}`
+        return `✅ 已启用 ${repo} 的订阅事件:\n${eventList}`
+      }
+      return '❌ 更新失败'
+    })
+
+  ctx.command('gh.off <repo:string> [...events:string]', '快捷禁用订阅事件')
+    .usage('gh.off owner/repo issues pull_request')
+    .example('gh.off koishijs/koishi issues pull_request')
+    .action(async ({session}, repo, ...events) => {
+      if (!session) return '❌ 无法获取会话信息'
+
+      if (!repo) {
+        return '❌ 请指定仓库名'
+      }
+
+      if (!events || events.length === 0) {
+        return `❌ 请指定事件类型\n可用类型: ${ALL_EVENT_TYPES.join(', ')}`
+      }
+
+      const sessionId = getSessionIdentifier(session)
+      const subscription = await getSubscription(ctx, sessionId, repo)
+
+      if (!subscription) {
+        return `❌ 未找到仓库 ${repo} 的订阅`
+      }
+
+      const changes = events.map(event => `-${event}`)
+      const newEvents = parseEventChanges(changes, subscription.events)
+      const success = await updateEvents(ctx, sessionId, repo, newEvents)
+
+      if (success) {
+        const eventList = newEvents.join(', ')
+        return `✅ 已禁用 ${repo} 的订阅事件:\n${eventList}`
       }
       return '❌ 更新失败'
     })
