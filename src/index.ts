@@ -8,6 +8,7 @@ import {Config} from './config'
 import {extendDatabase} from './database'
 import {registerWebhook} from './webhook'
 import {registerTrustCommands, registerSubscriptionCommands, registerUtilCommands} from './commands'
+import {cleanupDeliveries} from './repository'
 
 /** 插件名称 */
 export const name = 'github-webhook-pusher'
@@ -52,6 +53,8 @@ export function apply(ctx: Context, config: Config) {
   registerUtilCommands(ctx, config)
   logger.debug('工具命令已注册')
 
+  scheduleDeliveryCleanup(ctx, config)
+
   // 插件启动日志
   logger.info(`GitHub Webhook 插件已加载`)
   logger.info(`Webhook 路径: ${config.path}`)
@@ -60,4 +63,34 @@ export function apply(ctx: Context, config: Config) {
   if (config.debug) {
     logger.info('调试模式已启用')
   }
+}
+
+function scheduleDeliveryCleanup(ctx: Context, config: Config) {
+  if (config.deliveryRetentionDays <= 0) {
+    logger.debug('投递记录清理已禁用')
+    return
+  }
+
+  const intervalHours = Math.max(1, config.deliveryCleanupIntervalHours || 24)
+  const intervalMs = intervalHours * 60 * 60 * 1000
+
+  const runCleanup = async () => {
+    const beforeDate = new Date(Date.now() - config.deliveryRetentionDays * 24 * 60 * 60 * 1000)
+    const removed = await cleanupDeliveries(ctx, beforeDate)
+    if (config.debug) {
+      logger.debug(`清理投递记录: ${removed} 条 (保留 ${config.deliveryRetentionDays} 天)`)
+    }
+  }
+
+  runCleanup().catch(error => {
+    const message = error instanceof Error ? error.message : String(error)
+    logger.warn(`投递记录清理失败: ${message}`)
+  })
+
+  ctx.setInterval(() => {
+    runCleanup().catch(error => {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.warn(`投递记录清理失败: ${message}`)
+    })
+  }, intervalMs)
 }

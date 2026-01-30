@@ -69,7 +69,22 @@ export function registerWebhook(ctx: Context, config: Config) {
           return
         }
 
-        if (!verifySignature(rawBody, signature, config.secret)) {
+        let payloadForVerify = rawBody
+        if (!payloadForVerify) {
+          const requestBody = (koaCtx.request as any)?.body
+          if (requestBody) {
+            // fallback: body parser 已消费流，无法获得 raw body
+            payloadForVerify = JSON.stringify(requestBody)
+            logger.warn('未获取到原始请求体，已使用解析后的 body 进行验签（可能导致验签失败）')
+          } else {
+            logger.warn('无法获取请求体，无法进行签名验证')
+            koaCtx.status = 400
+            koaCtx.body = {error: 'Missing request body'}
+            return
+          }
+        }
+
+        if (!verifySignature(payloadForVerify, signature, config.secret)) {
           // 需求 1.3, 9.2: 签名验证失败
           logger.warn('签名验证失败')
           koaCtx.status = 401
@@ -84,13 +99,25 @@ export function registerWebhook(ctx: Context, config: Config) {
 
       // 解析 JSON 负载
       let payload: any
-      try {
-        payload = JSON.parse(rawBody)
-      } catch (e) {
-        logger.warn('无法解析 JSON 负载')
-        koaCtx.status = 400
-        koaCtx.body = {error: 'Invalid JSON payload'}
-        return
+      if (rawBody) {
+        try {
+          payload = JSON.parse(rawBody)
+        } catch (e) {
+          logger.warn('无法解析 JSON 负载')
+          koaCtx.status = 400
+          koaCtx.body = {error: 'Invalid JSON payload'}
+          return
+        }
+      } else {
+        const requestBody = (koaCtx.request as any)?.body
+        if (requestBody) {
+          payload = requestBody
+        } else {
+          logger.warn('请求体为空或无法读取')
+          koaCtx.status = 400
+          koaCtx.body = {error: 'Missing request body'}
+          return
+        }
       }
 
       // 获取仓库名
@@ -173,10 +200,17 @@ export function registerWebhook(ctx: Context, config: Config) {
  * @param koaCtx Koa 上下文
  * @returns 原始请求体字符串
  */
-async function getRawBody(koaCtx: any): Promise<string> {
-  // 如果已经有解析好的 body，尝试重新序列化
-  if (koaCtx.request.body) {
-    return JSON.stringify(koaCtx.request.body)
+async function getRawBody(koaCtx: any): Promise<string | null> {
+  const rawBody = (koaCtx.request as any)?.rawBody
+  if (typeof rawBody === 'string') {
+    return rawBody
+  }
+  if (Buffer.isBuffer(rawBody)) {
+    return rawBody.toString('utf8')
+  }
+
+  if (!koaCtx.req?.readable) {
+    return null
   }
 
   // 否则从流中读取

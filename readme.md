@@ -31,11 +31,12 @@ npm install koishi-plugin-github-webhook-pusher
 |--------|------|--------|------|
 | `path` | string | `/github/webhook` | Webhook 接收路径 |
 | `secret` | string | (必填) | GitHub Webhook Secret，用于签名验证 |
-| `baseUrl` | string | - | 显示用基础 URL |
 | `defaultEvents` | string[] | `['issues', 'release', 'push']` | 新订阅的默认事件类型 |
 | `debug` | boolean | `false` | 启用调试模式，输出详细日志 |
 | `allowUntrusted` | boolean | `false` | 是否允许处理非信任仓库的事件 |
 | `concurrency` | number | `5` | 消息推送并发数 |
+| `deliveryRetentionDays` | number | `30` | 投递记录保留天数（<=0 表示不清理） |
+| `deliveryCleanupIntervalHours` | number | `24` | 投递记录清理间隔（小时） |
 
 ### 配置示例
 
@@ -51,6 +52,8 @@ plugins:
     debug: false
     allowUntrusted: false
     concurrency: 5
+    deliveryRetentionDays: 30
+    deliveryCleanupIntervalHours: 24
 ```
 
 ## GitHub Webhook 设置指南
@@ -178,6 +181,7 @@ https://github.com/owner/repo/releases/tag/v1.0.0
 **A:** 签名验证失败。请检查：
 1. GitHub Webhook 设置中的 Secret 与插件配置的 `secret` 是否一致
 2. Content type 是否设置为 `application/json`
+3. 如果服务器未保留 raw body，插件会使用解析后的 body 回退验签，可能导致签名不一致；建议配置保留原始请求体
 
 ### Q: 收不到 Webhook 事件？
 
