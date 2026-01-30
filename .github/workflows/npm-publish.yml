@@ -1,60 +1,208 @@
-name: Node.js Package
+name: Release & Publish
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (留空则使用 package.json 中的版本)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
 
 jobs:
+  # ============================================
+  # 构建与测试
+  # ============================================
   build:
+    name: 🔨 Build & Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 方案2：不用 lock file，所以用 npm install
-      - run: npm install
+      - name: 📥 Install dependencies
+        run: npm install
 
-      # 必须有 build（比如 tsc 编译到 lib/）
-      - run: npm run build:ci
+      - name: 🔍 Type check
+        run: npx tsc -p tsconfig.json --noEmit
 
+      - name: 🧪 Run tests
+        run: npm test
+        continue-on-error: true
+
+      - name: 🔨 Build
+        run: npm run build:ci
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib-output
+          path: lib/
+          retention-days: 7
+
+
+  # ============================================
+  # 创建 GitHub Release
+  # ============================================
   release:
+    name: 🚀 Create Release
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Read package version
-        id: pkg
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-output
+          path: lib/
+
+      - name: 🏷️ Get version
+        id: version
         run: |
-          version=$(node -p "require('./package.json').version")
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Create GitHub Release
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag_name=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "📦 Version: $VERSION"
+
+      - name: 📝 Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          echo "## 📦 版本 v${{ steps.version.outputs.version }}" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "发布时间: $(date +'%Y-%m-%d %H:%M:%S UTC')" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "### 📋 更新内容 (自 $PREV_TAG 以来)" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            
+            echo "#### ✨ 新功能 (feat)" >> CHANGELOG.md
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - @%an" --grep="^feat" | head -50 >> CHANGELOG.md || true
+            echo "" >> CHANGELOG.md
+            
+            echo "#### 🐛 修复 (fix)" >> CHANGELOG.md
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - @%an" --grep="^fix" | head -50 >> CHANGELOG.md || true
+            echo "" >> CHANGELOG.md
+            
+            echo "#### 📚 文档 (docs)" >> CHANGELOG.md
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - @%an" --grep="^docs" | head -50 >> CHANGELOG.md || true
+            echo "" >> CHANGELOG.md
+            
+            echo "#### 🔧 其他更改" >> CHANGELOG.md
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - @%an" --invert-grep --grep="^feat" --grep="^fix" --grep="^docs" | head -50 >> CHANGELOG.md || true
+            echo "" >> CHANGELOG.md
+            
+            echo "---" >> CHANGELOG.md
+            echo "### 📊 统计" >> CHANGELOG.md
+            COMMIT_COUNT=$(git rev-list --count $PREV_TAG..HEAD)
+            CONTRIBUTORS=$(git log $PREV_TAG..HEAD --pretty=format:"%an" | sort -u | tr '\n' ', ' | sed 's/,$//')
+            echo "- 提交数: $COMMIT_COUNT" >> CHANGELOG.md
+            echo "- 贡献者: $CONTRIBUTORS" >> CHANGELOG.md
+          else
+            echo "### 📋 所有提交" >> CHANGELOG.md
+            git log --pretty=format:"- %s (\`%h\`) - @%an" | head -100 >> CHANGELOG.md
+          fi
+          
+          echo "" >> CHANGELOG.md
+          echo "---" >> CHANGELOG.md
+          echo "### 📥 安装" >> CHANGELOG.md
+          echo '```bash' >> CHANGELOG.md
+          echo "npm install koishi-plugin-github-webhook-pusher@${{ steps.version.outputs.version }}" >> CHANGELOG.md
+          echo '```' >> CHANGELOG.md
+
+      - name: 📦 Create release package
+        run: |
+          mkdir -p release-package
+          cp -r lib release-package/
+          cp package.json release-package/
+          cp readme.md release-package/ 2>/dev/null || true
+          cp LICENSE release-package/ 2>/dev/null || true
+          
+          cd release-package
+          tar -czvf ../koishi-plugin-github-webhook-pusher-v${{ steps.version.outputs.version }}.tar.gz .
+          cd ..
+          zip -r koishi-plugin-github-webhook-pusher-v${{ steps.version.outputs.version }}.zip release-package/
+
+      - name: 🚀 Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.pkg.outputs.version }}
-          name: v${{ steps.pkg.outputs.version }}
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          name: 🎉 v${{ steps.version.outputs.version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}
+          files: |
+            koishi-plugin-github-webhook-pusher-v${{ steps.version.outputs.version }}.tar.gz
+            koishi-plugin-github-webhook-pusher-v${{ steps.version.outputs.version }}.zip
           generate_release_notes: true
+          append_body: true
 
+  # ============================================
+  # 发布到 npm
+  # ============================================
   publish-npm:
+    name: 📤 Publish to npm
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-output
+          path: lib/
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
 
-      # 方案2：不用 lock file，所以用 npm install
-      - run: npm install
+      - name: 📥 Install dependencies
+        run: npm install --ignore-scripts
 
-      # 发布前构建（即使你有 prepublishOnly，这里显式跑也更清晰）
-      - run: npm run build:ci --if-present
-
-      - run: npm publish
+      - name: 📤 Publish to npm
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          if [[ "$VERSION" == *"alpha"* ]] || [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"rc"* ]]; then
+            npm publish --tag next
+          else
+            npm publish
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
+
+      - name: ✅ Publish success
+        run: |
+          echo "🎉 Published koishi-plugin-github-webhook-pusher@${{ needs.release.outputs.version }}"
+          echo "📦 https://www.npmjs.com/package/koishi-plugin-github-webhook-pusher"
