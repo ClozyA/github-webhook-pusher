@@ -90,10 +90,22 @@ jobs:
           echo "tag_name=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "📦 Version: $VERSION"
 
+      - name: 📝 Update package.json version
+        if: github.event.inputs.version != ''
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+          git push
+
       - name: 📝 Generate changelog
         id: changelog
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          # 获取上一个 tag（排除当前 tag）
+          CURRENT_TAG="${{ steps.version.outputs.tag_name }}"
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "^${CURRENT_TAG}$" | head -1 || echo "")
           
           echo "## 📦 版本 v${{ steps.version.outputs.version }}" > CHANGELOG.md
           echo "" >> CHANGELOG.md
@@ -175,6 +187,12 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || needs.release.outputs.tag_name }}
+
+      - name: 📥 Pull latest changes
+        if: github.event_name == 'workflow_dispatch'
+        run: git pull origin HEAD || true
 
       - name: 📥 Download build artifacts
         uses: actions/download-artifact@v4
