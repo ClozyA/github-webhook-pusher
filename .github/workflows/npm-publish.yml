@@ -117,19 +117,19 @@ jobs:
             echo "" >> CHANGELOG.md
             
             echo "#### ✨ 新功能 (feat)" >> CHANGELOG.md
-            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - @%an" --grep="^feat" | head -50 >> CHANGELOG.md || true
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - %an" --grep="^feat" | head -50 >> CHANGELOG.md || true
             echo "" >> CHANGELOG.md
             
             echo "#### 🐛 修复 (fix)" >> CHANGELOG.md
-            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - @%an" --grep="^fix" | head -50 >> CHANGELOG.md || true
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - %an" --grep="^fix" | head -50 >> CHANGELOG.md || true
             echo "" >> CHANGELOG.md
             
             echo "#### 📚 文档 (docs)" >> CHANGELOG.md
-            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - @%an" --grep="^docs" | head -50 >> CHANGELOG.md || true
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - %an" --grep="^docs" | head -50 >> CHANGELOG.md || true
             echo "" >> CHANGELOG.md
             
             echo "#### 🔧 其他更改" >> CHANGELOG.md
-            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - @%an" --invert-grep --grep="^feat" --grep="^fix" --grep="^docs" | head -50 >> CHANGELOG.md || true
+            git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - %an" --invert-grep --grep="^feat" --grep="^fix" --grep="^docs" | head -50 >> CHANGELOG.md || true
             echo "" >> CHANGELOG.md
             
             echo "---" >> CHANGELOG.md
@@ -140,7 +140,7 @@ jobs:
             echo "- 贡献者: $CONTRIBUTORS" >> CHANGELOG.md
           else
             echo "### 📋 所有提交" >> CHANGELOG.md
-            git log --pretty=format:"- %s (\`%h\`) - @%an" | head -100 >> CHANGELOG.md
+            git log --pretty=format:"- %s (\`%h\`) - %an" | head -100 >> CHANGELOG.md
           fi
           
           echo "" >> CHANGELOG.md
