@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-github-webhook-pusher",
   "description": "GitHub Webhook 事件推送插件",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "contributors": [
     "ClozyA <aoxuan233@gmail.com>"
   ],
