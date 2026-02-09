@@ -88,10 +88,25 @@ export function parseReleaseEvent(payload: any): ParsedEvent | null {
  * 需求 4.3, 4.6: 提取分支名、提交列表（最多5条）和推送者信息
  */
 export function parsePushEvent(payload: any): ParsedEvent | null {
-  const {ref, commits, repository, sender, compare} = payload
+  const {ref, commits, repository, sender, compare, created, deleted} = payload
 
   // 提取分支名（去掉 refs/heads/ 前缀）
   const branch = ref?.replace('refs/heads/', '') || ''
+
+  if ((!commits || commits.length === 0) && (created || deleted)) {
+    const actionText = created ? '创建分支' : '删除分支'
+    const type = created ? 'create' : 'delete'
+
+    return {
+      type,
+      displayType: getDisplayType(type),
+      repo: repository.full_name,
+      actor: sender.login,
+      action: actionText,
+      ref: branch,
+      url: repository.html_url,
+    }
+  }
 
   // 解析提交列表
   const allCommits: CommitInfo[] = (commits || []).map((commit: any) => ({
