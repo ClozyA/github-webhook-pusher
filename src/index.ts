@@ -46,7 +46,7 @@ export function apply(ctx: Context, config: Config) {
   logger.debug('信任仓库管理命令已注册')
 
   // 需求 3.1-3.7: 订阅管理命令
-  registerSubscriptionCommands(ctx, config)
+  registerSubscriptionCommands(ctx)
   logger.debug('订阅管理命令已注册')
 
   // 需求 8.1, 8.2: 工具命令

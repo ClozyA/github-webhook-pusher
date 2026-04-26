@@ -115,12 +115,9 @@ https://your-koishi-server.com/github/webhook
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `gh.sub <repo>` | 订阅仓库 | `gh.sub koishijs/koishi` |
-| `gh.unsub <repo>` | 取消订阅 | `gh.unsub koishijs/koishi` |
+| `gh.sub <repo>` | 订阅仓库（交互式选择事件） | `gh.sub koishijs/koishi` |
+| `gh.unsub <repo>` | 取消订阅（交互式选择事件，可整体取消） | `gh.unsub koishijs/koishi` |
 | `gh.list` | 列出当前会话的所有订阅 | `gh.list` |
-| `gh.events [repo]` | 查看订阅的事件类型（无 repo 时列出所有可用事件） | `gh.events koishijs/koishi` |
-| `gh.on <repo> [...events]` | 快捷启用订阅事件 | `gh.on koishijs/koishi issues pull_request` |
-| `gh.off <repo> [...events]` | 快捷禁用订阅事件 | `gh.off koishijs/koishi issues pull_request` |
 
 ### 工具命令
 
@@ -197,9 +194,7 @@ https://github.com/owner/repo/releases/tag/v1.0.0
 
 ### Q: 如何修改订阅的事件类型？
 
-**A:** 使用 `gh.on` / `gh.off` 命令：
-- 启用事件：`gh.on owner/repo issues release`
-- 禁用事件：`gh.off owner/repo star push`
+**A:** 直接再次执行 `gh.sub owner/repo` 可交互式添加未订阅的事件；执行 `gh.unsub owner/repo` 可交互式移除已订阅的事件，回复 `all` 则整体取消订阅。回复支持空格或逗号分隔多个编号。
 
 ### Q: 如何查看当前订阅了哪些仓库？
 
