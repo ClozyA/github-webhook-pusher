@@ -68,8 +68,10 @@ function buildIssueCommentMessage(event: ParsedEvent): Element[] {
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} #${event.number}: ${event.title}`,
-    event.url,
   ]
+
+  appendBody(lines, event.body)
+  lines.push(event.url)
 
   return [h('text', {content: lines.join('\n')})]
 }
@@ -159,8 +161,10 @@ function buildPullRequestReviewMessage(event: ParsedEvent): Element[] {
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} #${event.number}: ${event.title}`,
-    event.url,
   ]
+
+  appendBody(lines, event.body)
+  lines.push(event.url)
 
   return [h('text', {content: lines.join('\n')})]
 }
@@ -172,8 +176,10 @@ function buildPullRequestReviewCommentMessage(event: ParsedEvent): Element[] {
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} #${event.number}: ${event.title}`,
-    event.url,
   ]
+
+  appendBody(lines, event.body)
+  lines.push(event.url)
 
   return [h('text', {content: lines.join('\n')})]
 }
@@ -265,6 +271,26 @@ function buildGenericMessage(event: ParsedEvent): Element[] {
   ]
 
   return [h('text', {content: lines.join('\n')})]
+}
+
+/** 评论正文最大显示长度 */
+const MAX_BODY_LENGTH = 500
+
+/**
+ * 将评论正文追加到消息行中，超长截断并加省略号
+ */
+function appendBody(lines: string[], body?: string): void {
+  if (!body) return
+  const trimmed = body.trim()
+  if (!trimmed) return
+
+  const content = trimmed.length > MAX_BODY_LENGTH
+    ? trimmed.slice(0, MAX_BODY_LENGTH) + '...'
+    : trimmed
+
+  lines.push('')
+  lines.push(content)
+  lines.push('')
 }
 
 /**
