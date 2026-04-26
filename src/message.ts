@@ -55,8 +55,12 @@ function buildIssuesMessage(event: ParsedEvent): Element[] {
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} #${event.number}: ${event.title}`,
-    event.url,
   ]
+
+  if (event.action === 'opened' || event.action === 'edited') {
+    appendBody(lines, event.body)
+  }
+  lines.push(event.url)
 
   return [h('text', {content: lines.join('\n')})]
 }
@@ -89,8 +93,10 @@ function buildReleaseMessage(event: ParsedEvent): Element[] {
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} ${event.tagName || event.title}`,
-    event.url,
   ]
+
+  appendBody(lines, event.body)
+  lines.push(event.url)
 
   return [h('text', {content: lines.join('\n')})]
 }
@@ -148,8 +154,12 @@ function buildPullRequestMessage(event: ParsedEvent): Element[] {
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} #${event.number}: ${event.title}`,
-    event.url,
   ]
+
+  if (event.action === 'opened' || event.action === 'edited') {
+    appendBody(lines, event.body)
+  }
+  lines.push(event.url)
 
   return [h('text', {content: lines.join('\n')})]
 }
