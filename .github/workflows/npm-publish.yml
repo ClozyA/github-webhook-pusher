@@ -149,7 +149,7 @@ jobs:
           echo "---" >> CHANGELOG.md
           echo "### 📥 安装" >> CHANGELOG.md
           echo '```bash' >> CHANGELOG.md
-          echo "npm ci koishi-plugin-github-webhook-pusher@${{ steps.version.outputs.version }}" >> CHANGELOG.md
+          echo "npm install koishi-plugin-github-webhook-pusher@${{ steps.version.outputs.version }}" >> CHANGELOG.md
           echo '```' >> CHANGELOG.md
 
       - name: 📦 Create release package
