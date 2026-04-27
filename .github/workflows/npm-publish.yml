@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   # ============================================
@@ -30,10 +31,11 @@ jobs:
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
 
       - name: 📥 Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: 🔍 Type check
         run: npx tsc -p tsconfig.github.json --noEmit
@@ -96,7 +98,7 @@ jobs:
           npm version ${{ steps.version.outputs.version }} --no-git-tag-version
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
+          git add package.json package-lock.json
           git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
           git push
 
@@ -106,32 +108,32 @@ jobs:
           # 获取上一个 tag（排除当前 tag）
           CURRENT_TAG="${{ steps.version.outputs.tag_name }}"
           PREV_TAG=$(git tag --sort=-creatordate | grep -v "^${CURRENT_TAG}$" | head -1 || echo "")
-          
+
           echo "## 📦 版本 v${{ steps.version.outputs.version }}" > CHANGELOG.md
           echo "" >> CHANGELOG.md
           echo "发布时间: $(date +'%Y-%m-%d %H:%M:%S UTC')" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
+
           if [ -n "$PREV_TAG" ]; then
             echo "### 📋 更新内容 (自 $PREV_TAG 以来)" >> CHANGELOG.md
             echo "" >> CHANGELOG.md
-            
+
             echo "#### ✨ 新功能 (feat)" >> CHANGELOG.md
             git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - %an" --grep="^feat" | head -50 >> CHANGELOG.md || true
             echo "" >> CHANGELOG.md
-            
+
             echo "#### 🐛 修复 (fix)" >> CHANGELOG.md
             git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - %an" --grep="^fix" | head -50 >> CHANGELOG.md || true
             echo "" >> CHANGELOG.md
-            
+
             echo "#### 📚 文档 (docs)" >> CHANGELOG.md
             git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - %an" --grep="^docs" | head -50 >> CHANGELOG.md || true
             echo "" >> CHANGELOG.md
-            
+
             echo "#### 🔧 其他更改" >> CHANGELOG.md
             git log $PREV_TAG..HEAD --pretty=format:"- %s (\`%h\`) - %an" --invert-grep --grep="^feat" --grep="^fix" --grep="^docs" | head -50 >> CHANGELOG.md || true
             echo "" >> CHANGELOG.md
-            
+
             echo "---" >> CHANGELOG.md
             echo "### 📊 统计" >> CHANGELOG.md
             COMMIT_COUNT=$(git rev-list --count $PREV_TAG..HEAD)
@@ -142,12 +144,12 @@ jobs:
             echo "### 📋 所有提交" >> CHANGELOG.md
             git log --pretty=format:"- %s (\`%h\`) - %an" | head -100 >> CHANGELOG.md
           fi
-          
+
           echo "" >> CHANGELOG.md
           echo "---" >> CHANGELOG.md
           echo "### 📥 安装" >> CHANGELOG.md
           echo '```bash' >> CHANGELOG.md
-          echo "npm install koishi-plugin-github-webhook-pusher@${{ steps.version.outputs.version }}" >> CHANGELOG.md
+          echo "npm ci koishi-plugin-github-webhook-pusher@${{ steps.version.outputs.version }}" >> CHANGELOG.md
           echo '```' >> CHANGELOG.md
 
       - name: 📦 Create release package
@@ -157,7 +159,7 @@ jobs:
           cp package.json release-package/
           cp readme.md release-package/ 2>/dev/null || true
           cp LICENSE release-package/ 2>/dev/null || true
-          
+
           cd release-package
           tar -czvf ../koishi-plugin-github-webhook-pusher-v${{ steps.version.outputs.version }}.tar.gz .
           cd ..
@@ -203,11 +205,11 @@ jobs:
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org/
 
       - name: 📥 Install dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
 
       - name: 📤 Publish to npm
         run: |
@@ -217,8 +219,6 @@ jobs:
           else
             npm publish
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
 
       - name: ✅ Publish success
         run: |
