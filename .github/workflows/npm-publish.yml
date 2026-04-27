@@ -24,12 +24,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
@@ -48,7 +48,7 @@ jobs:
         run: npm run build:ci
 
       - name: 📤 Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lib-output
           path: lib/
@@ -67,12 +67,12 @@ jobs:
       tag_name: ${{ steps.version.outputs.tag_name }}
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: 📥 Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: lib-output
           path: lib/
@@ -166,18 +166,23 @@ jobs:
           zip -r koishi-plugin-github-webhook-pusher-v${{ steps.version.outputs.version }}.zip release-package/
 
       - name: 🚀 Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag_name }}
-          name: 🎉 v${{ steps.version.outputs.version }}
-          body_path: CHANGELOG.md
-          draft: false
-          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}
-          files: |
-            koishi-plugin-github-webhook-pusher-v${{ steps.version.outputs.version }}.tar.gz
-            koishi-plugin-github-webhook-pusher-v${{ steps.version.outputs.version }}.zip
-          generate_release_notes: true
-          append_body: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+
+          PRERELEASE_FLAG=""
+          if [[ "$VERSION" == *"alpha"* ]] || [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"rc"* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          gh release create "$TAG_NAME" \
+            koishi-plugin-github-webhook-pusher-v${VERSION}.tar.gz \
+            koishi-plugin-github-webhook-pusher-v${VERSION}.zip \
+            --title "🎉 v${VERSION}" \
+            --notes-file CHANGELOG.md \
+            $PRERELEASE_FLAG
 
   # ============================================
   # 发布到 npm
@@ -188,7 +193,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || needs.release.outputs.tag_name }}
 
@@ -197,13 +202,13 @@ jobs:
         run: git pull origin HEAD || true
 
       - name: 📥 Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: lib-output
           path: lib/
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
