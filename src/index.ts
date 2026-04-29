@@ -7,14 +7,17 @@ import {Context, Logger} from 'koishi'
 import {Config} from './config'
 import {extendDatabase} from './database'
 import {registerWebhook} from './webhook'
-import {registerTrustCommands, registerSubscriptionCommands, registerUtilCommands} from './commands'
+import {registerTrustCommands, registerSubscriptionCommands, registerUtilCommands, registerIssueLookupCommands} from './commands'
 import {cleanupDeliveries} from './repository'
 
 /** 插件名称 */
 export const name = 'github-webhook-pusher'
 
 /** 声明服务依赖 - 需要 server 服务提供 router 和 database 服务 */
-export const inject = ['server', 'database']
+export const inject = {
+  required: ['server', 'database'],
+  optional: ['puppeteer'],
+}
 
 /** 导出配置 Schema */
 export {Config}
@@ -52,6 +55,10 @@ export function apply(ctx: Context, config: Config) {
   // 需求 8.1, 8.2: 工具命令
   registerUtilCommands(ctx, config)
   logger.debug('工具命令已注册')
+
+  // Issues 截图查询命令
+  registerIssueLookupCommands(ctx, config)
+  logger.debug('Issues 截图查询命令已注册')
 
   scheduleDeliveryCleanup(ctx, config)
 

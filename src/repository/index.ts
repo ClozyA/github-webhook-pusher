@@ -5,3 +5,4 @@
 export * from './trust'
 export * from './subscription'
 export * from './delivery'
+export * from './issue-binding'

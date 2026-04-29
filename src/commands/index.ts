@@ -5,3 +5,4 @@
 export {registerTrustCommands} from './trust'
 export {registerSubscriptionCommands} from './subscription'
 export {registerUtilCommands} from './utils'
+export {registerIssueLookupCommands} from './issue-lookup'

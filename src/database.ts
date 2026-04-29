@@ -6,6 +6,7 @@ declare module 'koishi' {
     github_trusted_repos: TrustedRepo
     github_subscriptions: Subscription
     github_deliveries: Delivery
+    github_issue_bindings: IssueBinding
   }
 }
 
@@ -35,6 +36,17 @@ export interface Delivery {
   repo: string
   event: string
   receivedAt: Date
+}
+
+export interface IssueBinding {
+  id: number
+  platform: string
+  channelId: string
+  guildId: string
+  userId: string
+  repo: string
+  createdAt: Date
+  updatedAt: Date
 }
 
 export function extendDatabase(ctx: Context) {
@@ -73,5 +85,19 @@ export function extendDatabase(ctx: Context) {
     receivedAt: 'timestamp',
   }, {
     primary: 'deliveryId',
+  })
+
+  ctx.model.extend('github_issue_bindings', {
+    id: {type: 'unsigned', length: 10},
+    platform: 'string',
+    channelId: 'string',
+    guildId: 'string',
+    userId: 'string',
+    repo: 'string',
+    createdAt: 'timestamp',
+    updatedAt: 'timestamp',
+  }, {
+    primary: 'id',
+    autoInc: true,
   })
 }
