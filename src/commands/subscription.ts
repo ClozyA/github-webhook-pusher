@@ -79,6 +79,9 @@ function parseSelection(reply: string, events: EventType[]): EventType[] | null 
   return Array.from(selected)
 }
 
+/** 管理员权限等级 */
+const ADMIN_AUTHORITY = 3
+
 /**
  * 注册订阅管理命令
  */
@@ -91,6 +94,8 @@ export function registerSubscriptionCommands(ctx: Context) {
     .example('gh.sub koishijs/koishi')
     .action(async ({session}, repo) => {
       if (!session) return '❌ 无法获取会话信息'
+      const user = session.user as any
+      if ((user?.authority ?? 0) < ADMIN_AUTHORITY) return '❌ 权限不足，需要管理员权限'
       if (!repo) return '❌ 请指定仓库名，格式: owner/repo'
 
       const trusted = await isInTrustList(ctx, repo)
@@ -146,6 +151,8 @@ export function registerSubscriptionCommands(ctx: Context) {
     .example('gh.unsub koishijs/koishi')
     .action(async ({session}, repo) => {
       if (!session) return '❌ 无法获取会话信息'
+      const user = session.user as any
+      if ((user?.authority ?? 0) < ADMIN_AUTHORITY) return '❌ 权限不足，需要管理员权限'
       if (!repo) return '❌ 请指定仓库名'
 
       const sessionId = getSessionIdentifier(session)

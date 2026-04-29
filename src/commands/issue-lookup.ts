@@ -73,6 +73,8 @@ async function screenshotIssue(
   }
 }
 
+const ADMIN_AUTHORITY = 3
+
 export function registerIssueLookupCommands(ctx: Context, config: Config) {
   // gh.bind <repo> - 为当前会话绑定仓库
   ctx.command('gh.bind <repo:string>', '绑定 Issues 查询仓库')
@@ -80,6 +82,8 @@ export function registerIssueLookupCommands(ctx: Context, config: Config) {
     .example('gh.bind AUTO-MAS-Project/AUTO-MAS')
     .action(async ({session}, repo) => {
       if (!session) return '❌ 无法获取会话信息'
+      const user = session.user as any
+      if ((user?.authority ?? 0) < ADMIN_AUTHORITY) return '❌ 权限不足，需要管理员权限'
       if (!repo) return '❌ 请指定仓库名，格式: owner/repo'
       if (!isValidRepoFormat(repo)) return '❌ 仓库格式错误，请使用 owner/repo 格式'
 
@@ -98,6 +102,8 @@ export function registerIssueLookupCommands(ctx: Context, config: Config) {
     .usage('gh.unbind')
     .action(async ({session}) => {
       if (!session) return '❌ 无法获取会话信息'
+      const user = session.user as any
+      if ((user?.authority ?? 0) < ADMIN_AUTHORITY) return '❌ 权限不足，需要管理员权限'
 
       const removed = await removeIssueBinding(ctx, {
         platform: session.platform as string,
