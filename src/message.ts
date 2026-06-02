@@ -196,18 +196,19 @@ function buildPullRequestReviewCommentMessage(event: ParsedEvent): Element[] {
 
 /**
  * 构建 Star 事件消息
- * 格式: ⭐ [owner/repo] Star
+ * 格式: +⭐ [owner/repo] Star
  *       user starred (⭐ 1234)
- *       https://github.com/...
+ *
+ *       -⭐ [owner/repo] Star
+ *       user unstarred (⭐ 1233)
  */
 function buildStarMessage(event: ParsedEvent): Element[] {
-  const emoji = getEventEmoji(event.type)
+  const emoji = event.action === 'deleted' ? '-⭐' : '+⭐'
   const actionText = event.action === 'created' ? 'starred' : 'unstarred'
 
   const lines = [
     `${emoji} [${event.repo}] ${event.displayType}`,
     `${event.actor} ${actionText} (⭐ ${event.starCount})`,
-    event.url,
   ]
 
   return [h('text', {content: lines.join('\n')})]
