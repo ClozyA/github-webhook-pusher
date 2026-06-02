@@ -4,6 +4,7 @@ import {isValidRepoFormat} from '../repository'
 import {getIssueBinding, removeIssueBinding, setIssueBinding} from '../repository'
 
 const ISSUE_NUMBER_RE = /^#(\d+)$/
+const GITHUB_ISSUE_URL_RE = /https:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/(?:issues|pull)\/(\d+)(?=$|[/?#\s<)\]}>.,，。:：;；!！?？])/i
 const logger = new Logger('github-issue-lookup')
 
 function buildIssueUrl(repo: string, number: number, proxyUrl: string): string {
@@ -12,6 +13,20 @@ function buildIssueUrl(repo: string, number: number, proxyUrl: string): string {
     return `${base}/${repo}/issues/${number}`
   }
   return `https://github.com/${repo}/issues/${number}`
+}
+
+interface IssueReference {
+  repo: string
+  number: number
+}
+
+function parseGitHubIssueUrl(content: string): IssueReference | null {
+  const m = GITHUB_ISSUE_URL_RE.exec(content)
+  if (!m) return null
+  return {
+    repo: m[1],
+    number: parseInt(m[2], 10),
+  }
 }
 
 export async function screenshotIssue(
@@ -123,6 +138,27 @@ export function registerIssueLookupCommands(ctx: Context, config: Config) {
   // 消息中间件：拦截 #<number> 消息（始终注册，截图功能按配置降级）
   ctx.middleware(async (session, next) => {
     const content = session.content?.trim() ?? ''
+    const reference = parseGitHubIssueUrl(content)
+    if (reference) {
+      if (!config.issueScreenshot.enabled) return
+
+      await session.send('正在截图...')
+      try {
+        const buf = await screenshotIssue(ctx, reference.repo, reference.number, config)
+        if (!buf) {
+          logger.warn(`puppeteer 服务不可用，跳过 GitHub 链接截图`)
+          return
+        }
+        const base64 = buf.toString('base64')
+        await session.send(h('image', {url: `data:image/png;base64,${base64}`}))
+      } catch (err: any) {
+        const msg = err instanceof Error ? err.message : String(err)
+        logger.error(`截图 ${reference.repo}#${reference.number} 失败: ${msg}`)
+        await session.send(`❌ 获取 Issue #${reference.number} 失败: ${msg}`)
+      }
+      return
+    }
+
     const m = ISSUE_NUMBER_RE.exec(content)
     if (!m) return next()
 
