@@ -14,7 +14,7 @@ function buildIssueUrl(repo: string, number: number, proxyUrl: string): string {
   return `https://github.com/${repo}/issues/${number}`
 }
 
-async function screenshotIssue(
+export async function screenshotIssue(
   ctx: Context,
   repo: string,
   number: number,
@@ -30,7 +30,14 @@ async function screenshotIssue(
   const page = await puppet.page()
   try {
     await page.setViewport({width, height: 900})
-    await page.goto(url, {waitUntil: 'networkidle2', timeout})
+    const response = await page.goto(url, {waitUntil: 'networkidle2', timeout})
+    if (!response) {
+      throw new Error('页面加载失败: 未获取到 HTTP 响应')
+    }
+    const status = response.status()
+    if (status >= 400) {
+      throw new Error(`页面加载失败: HTTP ${status}。此问题通常是暂时性的，请稍后重试。`)
+    }
 
     // 等待 issue 主体内容加载
     await page.waitForSelector('.js-issue-title, .gh-header-title, [data-testid="issue-title"]', {timeout: 10000}).catch(() => {})
@@ -146,7 +153,7 @@ export function registerIssueLookupCommands(ctx: Context, config: Config) {
     } catch (err: any) {
       const msg = err instanceof Error ? err.message : String(err)
       logger.error(`截图 ${binding.repo}#${issueNumber} 失败: ${msg}`)
-      await session.send(`❌ 获取 Issue #${issueNumber} 失败: ${msg}\n🔗 ${url}`)
+      await session.send(`❌ 获取 Issue #${issueNumber} 失败: ${msg}`)
     }
   })
 }
