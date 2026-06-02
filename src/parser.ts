@@ -94,18 +94,7 @@ export function parsePushEvent(payload: any): ParsedEvent | null {
   const branch = ref?.replace('refs/heads/', '') || ''
 
   if ((!commits || commits.length === 0) && (created || deleted)) {
-    const actionText = created ? '创建分支' : '删除分支'
-    const type = created ? 'create' : 'delete'
-
-    return {
-      type,
-      displayType: getDisplayType(type),
-      repo: repository.full_name,
-      actor: sender.login,
-      action: actionText,
-      ref: branch,
-      url: repository.html_url,
-    }
+    return null
   }
 
   // 解析提交列表
