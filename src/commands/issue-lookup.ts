@@ -138,7 +138,7 @@ export function registerIssueLookupCommands(ctx: Context, config: Config) {
       const buf = await screenshotIssue(ctx, binding.repo, issueNumber, config)
       if (!buf) {
         logger.warn(`puppeteer 服务不可用，降级发链接`)
-        await session.send(`🔗 ${url}`)
+        await session.send(`截图失败，puppeteer 服务不可用。`)
         return
       }
       const base64 = buf.toString('base64')
