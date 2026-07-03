@@ -21,6 +21,26 @@ const config = {
 } as Config
 
 describe('screenshotIssue', () => {
+  it('reports a missing or inaccessible issue for HTTP 404', async () => {
+    const screenshot = vi.fn()
+    const close = vi.fn()
+    const page = {
+      setViewport: vi.fn(),
+      goto: vi.fn().mockResolvedValue({status: () => 404}),
+      waitForSelector: vi.fn(),
+      evaluate: vi.fn(),
+      screenshot,
+      close,
+    }
+    const ctx = {puppeteer: {page: vi.fn().mockResolvedValue(page)}}
+
+    await expect(screenshotIssue(ctx as any, 'AUTO-MAS-Project/AUTO-MAS', 999, config))
+      .rejects
+      .toThrow('该 Issue 或 PR 不存在，或当前无法访问。')
+    expect(screenshot).not.toHaveBeenCalled()
+    expect(close).toHaveBeenCalledOnce()
+  })
+
   it('rejects non-success page responses before taking a screenshot', async () => {
     const screenshot = vi.fn()
     const close = vi.fn()

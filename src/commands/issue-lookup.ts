@@ -50,6 +50,9 @@ export async function screenshotIssue(
       throw new Error('页面加载失败: 未获取到 HTTP 响应')
     }
     const status = response.status()
+    if (status === 404) {
+      throw new Error('该 Issue 或 PR 不存在，或当前无法访问。')
+    }
     if (status >= 400) {
       throw new Error(`页面加载失败: HTTP ${status}。此问题通常是暂时性的，请稍后重试。`)
     }
