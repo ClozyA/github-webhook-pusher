@@ -63,7 +63,9 @@ export function registerWebhook(ctx: Context, config: Config) {
       if (config.secret) {
         if (!signature) {
           // 需求 1.4: 缺少签名头
-          logger.warn('请求缺少 X-Hub-Signature-256 头')
+          if (config.debug) {
+            logger.warn('请求缺少 X-Hub-Signature-256 头')
+          }
           koaCtx.status = 401
           koaCtx.body = {error: 'Missing signature'}
           return
@@ -75,7 +77,9 @@ export function registerWebhook(ctx: Context, config: Config) {
           if (requestBody) {
             // fallback: body parser 已消费流，无法获得 raw body
             payloadForVerify = JSON.stringify(requestBody)
-            logger.warn('未获取到原始请求体，已使用解析后的 body 进行验签（可能导致验签失败）')
+            if (config.debug) {
+              logger.warn('未获取到原始请求体，已使用解析后的 body 进行验签（可能导致验签失败）')
+            }
           } else {
             logger.warn('无法获取请求体，无法进行签名验证')
             koaCtx.status = 400
