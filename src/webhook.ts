@@ -8,6 +8,7 @@ import type {Context as KoaContext} from 'koa'
 import {Config} from './config'
 import {verifySignature} from './signature'
 import {parseEvent} from './parser'
+import {isBotPayload} from './bot'
 import {pushEvent} from './pusher'
 import {isDelivered, isTrusted, recordDelivery} from './repository'
 
@@ -135,6 +136,16 @@ export function registerWebhook(ctx: Context, config: Config) {
 
       // 需求 9.1: 记录仓库名
       logger.info(`收到 Webhook: [${repo}] ${eventName} (${deliveryId})`)
+
+      if (!config.pushBotMessages && isBotPayload(payload)) {
+        const senderLogin = typeof payload.sender?.login === 'string'
+          ? payload.sender.login
+          : 'unknown'
+        logger.info('忽略机器人事件: ' + senderLogin)
+        koaCtx.status = 200
+        koaCtx.body = {status: 'ignored', reason: 'bot'} as WebhookResponse
+        return
+      }
 
       // 需求 1.6: 去重检查
       if (deliveryId) {

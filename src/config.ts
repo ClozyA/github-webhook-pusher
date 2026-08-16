@@ -14,6 +14,8 @@ export interface Config {
   debug: boolean
   /** 允许非信任仓库 */
   allowUntrusted: boolean
+  /** 是否推送机器人消息 */
+  pushBotMessages: boolean
   /** 推送并发数 */
   concurrency: number
   /** 投递记录保留天数（<=0 表示不清理） */
@@ -59,6 +61,7 @@ export const Config: Schema<Config> = Schema.object({
     .description('默认订阅事件'),
   debug: Schema.boolean().default(false).description('调试模式'),
   allowUntrusted: Schema.boolean().default(false).description('允许非信任仓库'),
+  pushBotMessages: Schema.boolean().default(false).description('是否推送机器人消息'),
   concurrency: Schema.number().default(5).description('推送并发数'),
   deliveryRetentionDays: Schema.number().default(30).description('投递记录保留天数（<=0 表示不清理）'),
   deliveryCleanupIntervalHours: Schema.number().default(24).description('投递记录清理间隔（小时）'),

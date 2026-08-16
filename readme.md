@@ -30,6 +30,7 @@ npm install koishi-plugin-github-webhook-pusher
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
+| pushBotMessages | boolean | false | 是否推送机器人消息 |
 | `path` | string | `/github/webhook` | Webhook 接收路径 |
 | `secret` | string | (必填) | GitHub Webhook Secret，用于签名验证 |
 | `defaultEvents` | string[] | `['issues', 'release', 'push']` | 新订阅的默认事件类型 |
@@ -48,6 +49,7 @@ npm install koishi-plugin-github-webhook-pusher
 ```yaml
 plugins:
   github-webhook-pusher:
+    pushBotMessages: false
     path: /github/webhook
     secret: your-webhook-secret-here
     defaultEvents:
@@ -288,6 +290,7 @@ npm install koishi-plugin-github-webhook-pusher
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | `path` | string | `/github/webhook` | Webhook 接收路径 |
+| pushBotMessages | boolean | false | 是否推送机器人消息 |
 | `secret` | string | (必填) | GitHub Webhook Secret，用于签名验证 |
 | `defaultEvents` | string[] | `['issues', 'release', 'push']` | 新订阅的默认事件类型 |
 | `debug` | boolean | `false` | 启用调试模式，输出详细日志 |
@@ -302,6 +305,7 @@ npm install koishi-plugin-github-webhook-pusher
 plugins:
   github-webhook-pusher:
     path: /github/webhook
+    pushBotMessages: false
     secret: your-webhook-secret-here
     defaultEvents:
       - issues
