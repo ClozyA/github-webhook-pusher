@@ -43,6 +43,30 @@ export function buildMessage(event: ParsedEvent): Element[] {
 }
 
 /**
+ * 将一个或多个 GitHub 事件构建成聊天记录（合并转发）消息。
+ * 每个事件对应一条转发节点，并使用 GitHub 操作者作为节点昵称。
+ */
+export function buildForwardMessage(events: ParsedEvent[]): Element[] {
+  const messages = events.map(event => h('message', {}, [
+    h('author', {name: event.actor}),
+    ...buildMessage(event),
+  ]))
+
+  return [h('message', {forward: true}, messages)]
+}
+
+/**
+ * 合并转发发送失败时，将同一批事件合并成一条普通文本消息。
+ */
+export function buildBatchFallbackMessage(events: ParsedEvent[]): Element[] {
+  const content = events
+    .map(event => buildMessage(event)[0].attrs.content as string)
+    .join('\n\n──────────\n\n')
+
+  return [h('text', {content})]
+}
+
+/**
  * 构建 Issues 事件消息
  * 格式: 📌 [owner/repo] Issue
  *       user opened #123: Issue Title

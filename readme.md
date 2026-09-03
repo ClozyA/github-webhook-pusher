@@ -36,6 +36,9 @@ npm install koishi-plugin-github-webhook-pusher
 | `defaultEvents` | string[] | `['issues', 'release', 'push']` | 新订阅的默认事件类型 |
 | `debug` | boolean | `false` | 启用调试模式，输出详细日志 |
 | `allowUntrusted` | boolean | `false` | 是否允许处理非信任仓库的事件 |
+| `forwardPrivateMessages` | boolean | `false` | 私聊是否使用聊天记录（合并转发）形式推送 |
+| `forwardGroupMessages` | boolean | `false` | 群聊是否使用聊天记录（合并转发）形式推送 |
+| `forwardBatchSeconds` | number | `3` | 合并转发聚合窗口（秒），`0` 表示每个事件单独发送 |
 | `concurrency` | number | `5` | 消息推送并发数 |
 | `deliveryRetentionDays` | number | `30` | 投递记录保留天数（<=0 表示不清理） |
 | `deliveryCleanupIntervalHours` | number | `24` | 投递记录清理间隔（小时） |
@@ -43,6 +46,8 @@ npm install koishi-plugin-github-webhook-pusher
 | `issueScreenshot.enabled` | boolean | `false` | 启用 Issue 截图功能（需安装 puppeteer 服务） |
 | `issueScreenshot.timeout` | number | `15000` | 页面加载超时（毫秒） |
 | `issueScreenshot.viewportWidth` | number | `1280` | 截图视口宽度（像素） |
+
+启用私聊或群聊合并转发后，插件会按“平台 + 会话”分别聚合事件。聚合窗口从第一条事件到达时开始，不会因后续事件持续延长；发送失败时会自动回退为一条合并的普通文本消息。
 
 ### 配置示例
 
@@ -58,6 +63,9 @@ plugins:
       - push
     debug: false
     allowUntrusted: false
+    forwardPrivateMessages: false
+    forwardGroupMessages: false
+    forwardBatchSeconds: 5
     concurrency: 5
     deliveryRetentionDays: 30
     deliveryCleanupIntervalHours: 24
@@ -295,9 +303,14 @@ npm install koishi-plugin-github-webhook-pusher
 | `defaultEvents` | string[] | `['issues', 'release', 'push']` | 新订阅的默认事件类型 |
 | `debug` | boolean | `false` | 启用调试模式，输出详细日志 |
 | `allowUntrusted` | boolean | `false` | 是否允许处理非信任仓库的事件 |
+| `forwardPrivateMessages` | boolean | `false` | 私聊是否使用聊天记录（合并转发）形式推送 |
+| `forwardGroupMessages` | boolean | `false` | 群聊是否使用聊天记录（合并转发）形式推送 |
+| `forwardBatchSeconds` | number | `3` | 合并转发聚合窗口（秒），`0` 表示每个事件单独发送 |
 | `concurrency` | number | `5` | 消息推送并发数 |
 | `deliveryRetentionDays` | number | `30` | 投递记录保留天数（<=0 表示不清理） |
 | `deliveryCleanupIntervalHours` | number | `24` | 投递记录清理间隔（小时） |
+
+启用私聊或群聊合并转发后，插件会按“平台 + 会话”分别聚合事件。聚合窗口从第一条事件到达时开始，不会因后续事件持续延长；发送失败时会自动回退为一条合并的普通文本消息。
 
 ### 配置示例
 
@@ -313,6 +326,9 @@ plugins:
       - push
     debug: false
     allowUntrusted: false
+    forwardPrivateMessages: false
+    forwardGroupMessages: false
+    forwardBatchSeconds: 5
     concurrency: 5
     deliveryRetentionDays: 30
     deliveryCleanupIntervalHours: 24

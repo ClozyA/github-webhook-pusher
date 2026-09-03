@@ -7,7 +7,8 @@ import {Context} from 'koishi'
 import {Config} from '../config'
 import {EventType, EVENT_DISPLAY_MAP, ParsedEvent, getDisplayType} from '../types'
 import {listTrustedRepos} from '../repository/trust'
-import {buildMessage} from '../message'
+import {buildForwardMessage, buildMessage} from '../message'
+import {shouldUseForwardMessage} from '../pusher'
 
 /** 插件名称（避免循环依赖） */
 const PLUGIN_NAME = 'github-webhook-pusher'
@@ -188,7 +189,9 @@ export function registerUtilCommands(ctx: Context, config: Config) {
 
       // 生成测试事件
       const testEvent = generateTestEvent(repo, event as EventType)
-      const message = buildMessage(testEvent)
+      const message = shouldUseForwardMessage({guildId: session?.guildId}, config)
+        ? buildForwardMessage([testEvent])
+        : buildMessage(testEvent)
 
       // 发送测试消息到当前会话
       await session?.send(message)

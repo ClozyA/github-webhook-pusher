@@ -28,6 +28,7 @@ interface WebhookResponse {
   status: 'ok' | 'ignored' | 'duplicate' | 'error'
   reason?: string
   pushed?: number
+  queued?: number
   error?: string
 }
 
@@ -185,15 +186,19 @@ export function registerWebhook(ctx: Context, config: Config) {
       }
 
       // 推送消息
-      const result = await pushEvent(ctx, event, config.concurrency)
+      const result = await pushEvent(ctx, event, config)
 
       // 需求 9.4: 记录推送结果
       const elapsed = Date.now() - startTime
-      logger.info(`处理完成: 推送 ${result.pushed} 成功, ${result.failed} 失败 (${elapsed}ms)`)
+      logger.info(`处理完成: 推送 ${result.pushed} 成功, ${result.queued} 已排队, ${result.failed} 失败 (${elapsed}ms)`)
 
       // 需求 1.5: 返回成功响应
       koaCtx.status = 200
-      koaCtx.body = {status: 'ok', pushed: result.pushed} as WebhookResponse
+      koaCtx.body = {
+        status: 'ok',
+        pushed: result.pushed,
+        queued: result.queued,
+      } as WebhookResponse
 
     } catch (error) {
       // 需求 9.5: 记录错误

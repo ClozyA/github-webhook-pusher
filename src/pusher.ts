@@ -6,7 +6,7 @@
 import {Context, Element, Logger} from 'koishi'
 import {EventType, ParsedEvent} from './types'
 import {PushTarget, queryTargets as querySubscriptionTargets} from './repository/subscription'
-import {buildMessage} from './message'
+import {buildBatchFallbackMessage, buildForwardMessage, buildMessage} from './message'
 
 const logger = new Logger('github-webhook-pusher')
 
@@ -14,8 +14,30 @@ const logger = new Logger('github-webhook-pusher')
 export interface PushResult {
   target: PushTarget
   success: boolean
+  queued?: boolean
   error?: Error
 }
+
+/** 合并转发相关推送配置 */
+export interface PushOptions {
+  concurrency: number
+  forwardPrivateMessages: boolean
+  forwardGroupMessages: boolean
+  forwardBatchSeconds: number
+}
+
+interface MessageJob {
+  target: PushTarget
+  message: Element[]
+  fallbackMessage?: Element[]
+}
+
+interface PendingForwardBatch {
+  target: PushTarget
+  events: ParsedEvent[]
+}
+
+const forwardBatches = new WeakMap<Context, Map<string, PendingForwardBatch>>()
 
 /**
  * 查询订阅目标
@@ -82,28 +104,47 @@ export async function pushWithConcurrency(
   message: Element[],
   concurrency: number
 ): Promise<PushResult[]> {
-  if (targets.length === 0) {
+  return pushJobsWithConcurrency(
+    ctx,
+    targets.map(target => ({target, message})),
+    concurrency
+  )
+}
+
+async function pushJobsWithConcurrency(
+  ctx: Context,
+  jobs: MessageJob[],
+  concurrency: number
+): Promise<PushResult[]> {
+  if (jobs.length === 0) {
     return []
   }
 
   const results: PushResult[] = []
-  const queue = [...targets]
+  const queue = [...jobs]
 
   // 创建工作协程
-  const workers = Array(Math.min(concurrency, queue.length))
+  const workerCount = Math.min(Math.max(1, concurrency || 1), queue.length)
+  const workers = Array(workerCount)
     .fill(null)
     .map(async () => {
       while (queue.length > 0) {
-        const target = queue.shift()
-        if (!target) break
+        const job = queue.shift()
+        if (!job) break
 
-        const result = await sendMessage(ctx, target, message)
+        let result = await sendMessage(ctx, job.target, job.message)
+        if (!result.success && job.fallbackMessage) {
+          logger.warn(
+            `合并转发失败 [${job.target.platform}:${job.target.channelId}]，回退为普通文本: ${result.error?.message || '未知错误'}`
+          )
+          result = await sendMessage(ctx, job.target, job.fallbackMessage)
+        }
         results.push(result)
 
         // 需求 5.7: 推送失败记录错误日志但不影响其他目标
         if (!result.success && result.error) {
           logger.error(
-            `推送失败 [${target.platform}:${target.channelId}]: ${result.error.message}`
+            `推送失败 [${job.target.platform}:${job.target.channelId}]: ${result.error.message}`
           )
         }
       }
@@ -113,17 +154,99 @@ export async function pushWithConcurrency(
   return results
 }
 
+/** 判断目标会话是否启用了聊天记录形式 */
+export function shouldUseForwardMessage(
+  target: Pick<PushTarget, 'guildId'>,
+  options: Pick<PushOptions, 'forwardPrivateMessages' | 'forwardGroupMessages'>
+): boolean {
+  return target.guildId
+    ? options.forwardGroupMessages
+    : options.forwardPrivateMessages
+}
+
+function getForwardBatchKey(target: PushTarget): string {
+  return [target.platform, target.channelId, target.guildId || ''].join('\u0000')
+}
+
+function getForwardBatches(ctx: Context): Map<string, PendingForwardBatch> {
+  let batches = forwardBatches.get(ctx)
+  if (!batches) {
+    batches = new Map()
+    forwardBatches.set(ctx, batches)
+  }
+  return batches
+}
+
+function queueForwardMessage(
+  ctx: Context,
+  target: PushTarget,
+  event: ParsedEvent,
+  batchSeconds: number
+): PushResult {
+  const batches = getForwardBatches(ctx)
+  const key = getForwardBatchKey(target)
+  const existing = batches.get(key)
+
+  if (existing) {
+    existing.events.push(event)
+  } else {
+    batches.set(key, {target, events: [event]})
+    ctx.setTimeout(() => {
+      void flushForwardBatch(ctx, key)
+    }, batchSeconds * 1000)
+  }
+
+  return {target, success: true, queued: true}
+}
+
+async function flushForwardBatch(ctx: Context, key: string): Promise<void> {
+  const batches = getForwardBatches(ctx)
+  const batch = batches.get(key)
+  if (!batch) return
+
+  // 先移除当前批次；发送期间到达的新事件会开启一个新窗口。
+  batches.delete(key)
+
+  const result = await sendMessage(
+    ctx,
+    batch.target,
+    buildForwardMessage(batch.events)
+  )
+
+  if (result.success) {
+    logger.info(
+      `合并转发完成 [${batch.target.platform}:${batch.target.channelId}]: ${batch.events.length} 条事件`
+    )
+    return
+  }
+
+  logger.warn(
+    `合并转发失败 [${batch.target.platform}:${batch.target.channelId}]，回退为普通文本: ${result.error?.message || '未知错误'}`
+  )
+
+  const fallbackResult = await sendMessage(
+    ctx,
+    batch.target,
+    buildBatchFallbackMessage(batch.events)
+  )
+  if (!fallbackResult.success && fallbackResult.error) {
+    logger.error(
+      `回退推送失败 [${batch.target.platform}:${batch.target.channelId}]: ${fallbackResult.error.message}`
+    )
+  }
+}
+
 /**
  * 推送消息到所有订阅目标
  * @param ctx Koishi 上下文
  * @param event 解析后的事件
- * @param concurrency 并发数限制
+ * @param options 推送配置
  * @returns 推送结果列表
  */
 export async function pushMessage(
   ctx: Context,
   event: ParsedEvent,
-  concurrency: number = 5
+  options: PushOptions
 ): Promise<PushResult[]> {
   // 查询订阅目标
   const targets = await queryTargets(ctx, event.repo, event.type)
@@ -135,17 +258,36 @@ export async function pushMessage(
 
   logger.info(`准备推送 ${event.type} 事件到 ${targets.length} 个目标`)
 
-  // 构建消息
-  const message = buildMessage(event)
+  const immediateJobs: MessageJob[] = []
+  const results: PushResult[] = []
+  const batchSeconds = Math.max(0, options.forwardBatchSeconds || 0)
 
-  // 并发推送
-  const results = await pushWithConcurrency(ctx, targets, message, concurrency)
+  for (const target of targets) {
+    if (!shouldUseForwardMessage(target, options)) {
+      immediateJobs.push({target, message: buildMessage(event)})
+    } else if (batchSeconds > 0) {
+      results.push(queueForwardMessage(ctx, target, event, batchSeconds))
+    } else {
+      immediateJobs.push({
+        target,
+        message: buildForwardMessage([event]),
+        fallbackMessage: buildMessage(event),
+      })
+    }
+  }
+
+  results.push(...await pushJobsWithConcurrency(
+    ctx,
+    immediateJobs,
+    Math.max(1, options.concurrency || 5)
+  ))
 
   // 统计结果
-  const successCount = results.filter(r => r.success).length
+  const successCount = results.filter(r => r.success && !r.queued).length
+  const queuedCount = results.filter(r => r.queued).length
   const failCount = results.filter(r => !r.success).length
 
-  logger.info(`推送完成: 成功 ${successCount}, 失败 ${failCount}`)
+  logger.info(`推送完成: 成功 ${successCount}, 已排队 ${queuedCount}, 失败 ${failCount}`)
 
   return results
 }
@@ -155,18 +297,19 @@ export async function pushMessage(
  * 整合事件解析、消息构建和推送
  * @param ctx Koishi 上下文
  * @param event 解析后的事件
- * @param concurrency 并发数限制
+ * @param options 推送配置
  * @returns 推送结果
  */
 export async function pushEvent(
   ctx: Context,
   event: ParsedEvent,
-  concurrency: number = 5
-): Promise<{ pushed: number; failed: number; results: PushResult[] }> {
-  const results = await pushMessage(ctx, event, concurrency)
+  options: PushOptions
+): Promise<{ pushed: number; queued: number; failed: number; results: PushResult[] }> {
+  const results = await pushMessage(ctx, event, options)
 
   return {
-    pushed: results.filter(r => r.success).length,
+    pushed: results.filter(r => r.success && !r.queued).length,
+    queued: results.filter(r => r.queued).length,
     failed: results.filter(r => !r.success).length,
     results,
   }

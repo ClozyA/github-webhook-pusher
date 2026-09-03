@@ -1,10 +1,14 @@
 import {describe, expect, it, vi} from 'vitest'
-import {buildMessage} from '../src/message'
+import {buildBatchFallbackMessage, buildForwardMessage, buildMessage} from '../src/message'
 import {ParsedEvent} from '../src/types'
 
 vi.mock('koishi', () => ({
   Element: class Element {},
-  h: (_type: string, attrs: Record<string, unknown>) => ({attrs}),
+  h: (
+    type: string,
+    attrs: Record<string, unknown> = {},
+    children: unknown[] = []
+  ) => ({type, attrs, children}),
 }))
 
 const baseStarEvent: ParsedEvent = {
@@ -44,5 +48,40 @@ describe('buildMessage star events', () => {
       '-⭐ [AUTO-MAS-Project/AUTO-MAS] Star',
       'ClozyA unstarred (⭐ 1233)',
     ].join('\n'))
+  })
+})
+
+describe('forward messages', () => {
+  it('wraps every event in one forward node using the actor as its author', () => {
+    const events = [
+      {...baseStarEvent, action: 'created'},
+      {...baseStarEvent, actor: 'octocat', action: 'deleted', starCount: 1233},
+    ]
+
+    const [forward] = buildForwardMessage(events)
+
+    expect(forward.type).toBe('message')
+    expect(forward.attrs).toEqual({forward: true})
+    expect(forward.children).toHaveLength(2)
+    expect(forward.children[0].children[0]).toMatchObject({
+      type: 'author',
+      attrs: {name: 'ClozyA'},
+    })
+    expect(forward.children[1].children[0]).toMatchObject({
+      type: 'author',
+      attrs: {name: 'octocat'},
+    })
+  })
+
+  it('joins batched events into one readable fallback text', () => {
+    const [fallback] = buildBatchFallbackMessage([
+      {...baseStarEvent, action: 'created'},
+      {...baseStarEvent, action: 'deleted', starCount: 1233},
+    ])
+
+    expect(fallback.type).toBe('text')
+    expect(fallback.attrs.content).toContain('──────────')
+    expect(fallback.attrs.content).toContain('ClozyA starred')
+    expect(fallback.attrs.content).toContain('ClozyA unstarred')
   })
 })
