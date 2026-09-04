@@ -45,11 +45,12 @@ export function buildMessage(event: ParsedEvent): Element[] {
 /**
  * 将一个或多个 GitHub 事件构建成聊天记录（合并转发）消息。
  * 每个事件对应一条转发节点，并使用 GitHub 操作者作为节点昵称。
+ * 第一行是折叠状态下的简短预览，后面保留原来的完整消息。
  */
 export function buildForwardMessage(events: ParsedEvent[]): Element[] {
   const messages = events.map(event => h('message', {}, [
     h('author', {name: event.actor}),
-    ...buildMessage(event),
+    ...buildForwardNodeMessage(event),
   ]))
 
   return [h('message', {forward: true}, messages)]
@@ -64,6 +65,114 @@ export function buildBatchFallbackMessage(events: ParsedEvent[]): Element[] {
     .join('\n\n──────────\n\n')
 
   return [h('text', {content})]
+}
+
+/**
+ * 构建聊天记录节点正文。
+ * 第一行提供简短预览，第二行起完整保留普通消息内容。
+ */
+function buildForwardNodeMessage(event: ParsedEvent): Element[] {
+  let lines: string[]
+
+  switch (event.type) {
+    case 'issues':
+    case 'pull_request':
+      lines = [
+        `${getActionText(event.action)} #${event.number}: ${event.title}`,
+      ]
+      if (event.action === 'opened' || event.action === 'edited') {
+        appendBody(lines, event.body)
+      }
+      lines.push(event.url)
+      break
+    case 'issue_comment':
+    case 'pull_request_review_comment':
+      lines = [
+        `${getCommentActionText(event.action)} #${event.number}: ${event.title}`,
+      ]
+      appendBody(lines, event.body)
+      lines.push(event.url)
+      break
+    case 'pull_request_review':
+      lines = [
+        `${getReviewActionText(event.action)} #${event.number}: ${event.title}`,
+      ]
+      appendBody(lines, event.body)
+      lines.push(event.url)
+      break
+    case 'release': {
+      const releaseName = event.tagName || event.title || 'release'
+      lines = [`${getActionText(event.action)} ${releaseName}`]
+      appendBody(lines, event.body)
+      lines.push(event.url)
+      break
+    }
+    case 'push': {
+      const commits = event.commits || []
+      const totalCommits = event.totalCommits || commits.length
+      const commitCount = totalCommits === 1 ? '一个' : `${totalCommits} 个`
+      const target = event.ref ? `到 ${event.ref}` : ''
+      lines = [`推送了${commitCount}提交${target}`]
+      for (const commit of commits) {
+        lines.push(`• ${commit.sha}: ${commit.message}`)
+      }
+      if (totalCommits > commits.length) {
+        lines.push(`…另有 ${totalCommits - commits.length} 个提交`)
+      }
+      lines.push(event.url)
+      break
+    }
+    case 'star': {
+      const actionText = event.action === 'created' ? '点了 Star' : '取消了 Star'
+      const countText = event.starCount === undefined ? '' : `（现有 ${event.starCount} 个）`
+      lines = [`${actionText}${countText}`]
+      break
+    }
+    case 'fork': {
+      const target = event.title ? ` -> ${event.title}` : ''
+      lines = [`forked${target}`, event.url]
+      break
+    }
+    case 'create':
+    case 'delete': {
+      const refText = event.ref ? ` ${event.ref.replace(':', ' ')}` : ''
+      lines = [`${getActionText(event.action)}${refText}`, event.url]
+      break
+    }
+    case 'workflow_run': {
+      const nameText = event.title ? ` ${event.title}` : ''
+      lines = [`${getActionText(event.action)}${nameText}`, event.url]
+      break
+    }
+    default:
+      lines = [`${event.action || 'triggered'}`, event.url]
+  }
+
+  const originalContent = buildMessage(event)[0].attrs.content as string
+  return [h('text', {content: `${lines[0]}\n${originalContent}`})]
+}
+
+function getCommentActionText(action?: string): string {
+  const actionMap: Record<string, string> = {
+    created: 'commented on',
+    edited: 'edited a comment on',
+    deleted: 'deleted a comment on',
+  }
+
+  return actionMap[action || ''] || getActionText(action)
+}
+
+function getReviewActionText(action?: string): string {
+  const actionMap: Record<string, string> = {
+    approved: 'approved',
+    changes_requested: 'requested changes on',
+    commented: 'reviewed',
+    submitted: 'reviewed',
+    edited: 'edited a review on',
+    dismissed: 'dismissed a review on',
+  }
+
+  return actionMap[action || ''] || getActionText(action)
 }
 
 /**
