@@ -5,6 +5,9 @@ import {getIssueBinding, removeIssueBinding, setIssueBinding} from '../repositor
 
 const ISSUE_NUMBER_RE = /^#(\d+)$/
 const GITHUB_ISSUE_URL_RE = /https:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/(?:issues|pull)\/(\d+)(?=$|[/?#\s<)\]}>.,，。:：;；!！?？])/i
+const ISSUE_TITLE_SELECTOR = 'main h1, .js-issue-title, .gh-header-title, [data-testid="issue-title"]'
+const CONTENT_READY_TIMEOUT = 5000
+const RESOURCE_READY_TIMEOUT = 2000
 const logger = new Logger('github-issue-lookup')
 
 function buildIssueUrl(repo: string, number: number, proxyUrl: string): string {
@@ -45,7 +48,7 @@ export async function screenshotIssue(
   const page = await puppet.page()
   try {
     await page.setViewport({width, height: 900})
-    const response = await page.goto(url, {waitUntil: 'networkidle2', timeout})
+    const response = await page.goto(url, {waitUntil: 'domcontentloaded', timeout})
     if (!response) {
       throw new Error('页面加载失败: 未获取到 HTTP 响应')
     }
@@ -57,20 +60,28 @@ export async function screenshotIssue(
       throw new Error(`页面加载失败: HTTP ${status}。此问题通常是暂时性的，请稍后重试。`)
     }
 
-    // 等待 issue 主体内容加载
-    await page.waitForSelector('.js-issue-title, .gh-header-title, [data-testid="issue-title"]', {timeout: 10000}).catch(() => {})
+    // GitHub 会持续发起动态请求，不能依赖 networkidle2 判断内容是否就绪。
+    // DOM 加载后只等待截图必需的 issue 标题，避免无关请求拖慢截图。
+    await page.waitForSelector(ISSUE_TITLE_SELECTOR, {
+      timeout: Math.min(timeout, CONTENT_READY_TIMEOUT),
+    }).catch(() => {
+      throw new Error('Issue 内容加载超时，请检查网络或 GitHub 代理。')
+    })
 
-    // 等待页面内所有图片加载完成（包括头像、内嵌图片等）
-    await page.evaluate(async () => {
+    // 给字体和图片一个短暂的加载窗口；慢资源不再无限阻塞截图。
+    await page.evaluate(async (resourceReadyTimeout: number) => {
       const imgs = Array.from(document.querySelectorAll('img'))
-      await Promise.all(imgs.map(img => {
+      const imagesReady = Promise.all(imgs.map(img => {
         if (img.complete) return Promise.resolve()
         return new Promise<void>(resolve => {
-          img.addEventListener('load', () => resolve())
-          img.addEventListener('error', () => resolve())
+          img.addEventListener('load', () => resolve(), {once: true})
+          img.addEventListener('error', () => resolve(), {once: true})
         })
       }))
-    }).catch(() => {})
+      const fontsReady = document.fonts?.ready.then(() => undefined) ?? Promise.resolve()
+      const timeoutReached = new Promise<void>(resolve => setTimeout(resolve, resourceReadyTimeout))
+      await Promise.race([Promise.all([imagesReady, fontsReady]), timeoutReached])
+    }, RESOURCE_READY_TIMEOUT).catch(() => {})
 
     // 隐藏与 issue/PR 内容无关的页面元素
     await page.evaluate(() => {

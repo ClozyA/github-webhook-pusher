@@ -119,9 +119,14 @@ describe('registerIssueLookupCommands', () => {
 
     expect(next).not.toHaveBeenCalled()
     expect(page.goto).toHaveBeenCalledWith('https://github.com/AUTO-MAS-Project/AUTO-MAS/issues/212', {
-      waitUntil: 'networkidle2',
+      waitUntil: 'domcontentloaded',
       timeout: 15000,
     })
+    expect(page.waitForSelector).toHaveBeenCalledWith(
+      'main h1, .js-issue-title, .gh-header-title, [data-testid="issue-title"]',
+      {timeout: 5000}
+    )
+    expect(page.evaluate.mock.calls[0][1]).toBe(2000)
     expect(session.send).toHaveBeenCalledWith('正在截图...')
     expect(session.send).toHaveBeenCalledWith('image-element')
   })
@@ -175,7 +180,7 @@ describe('registerIssueLookupCommands', () => {
     await handler(session, vi.fn())
 
     expect(page.goto).toHaveBeenCalledWith('https://github.com/AUTO-MAS-Project/AUTO-MAS/issues/212', {
-      waitUntil: 'networkidle2',
+      waitUntil: 'domcontentloaded',
       timeout: 15000,
     })
     expect(session.send).toHaveBeenCalledWith('image-element')
